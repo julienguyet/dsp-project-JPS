@@ -7,7 +7,7 @@ import sys
 sys.path.append('./sales_prediction')
 
 
-def make_predictions(input_data: pd.DataFrame) -> np.ndarray:
+'''def make_predictions(input_data: pd.DataFrame) -> np.ndarray:
 
     df = create_time_feature(input_data)
     df = cpi_difference(df)
@@ -17,4 +17,23 @@ def make_predictions(input_data: pd.DataFrame) -> np.ndarray:
     model = joblib.load('../models/random-forest.joblib')
     Y = model.predict(X_test_encoded)
 
+    return {"Here are our predictions using Random Forest": Y}'''
+
+
+def make_predictions(input_data: dict) -> dict:
+    # Convert the input dictionary to a DataFrame
+    df = pd.DataFrame(input_data)
+    
+    # Preprocess the data and make predictions
+    df = create_time_feature(df)
+    df = cpi_difference(df)
+    clean_data = filling_na(df, TEST_FEATURES)
+    clean_data.drop(columns=FEATURES_TO_DROP, inplace=True)
+    X_test_encoded = test_data_encoder(df=clean_data, path=MODEL_BASE_PATH)
+    
+    # Load the model and make predictions
+    model = joblib.load('../models/random-forest.joblib')
+    Y = model.predict(X_test_encoded)
+
+    # Return the predictions as a dictionary
     return {"Here are our predictions using Random Forest": Y}
