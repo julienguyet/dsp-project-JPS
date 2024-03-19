@@ -12,7 +12,7 @@ sys.path.append('../../house_prices/')
 app = FastAPI()
 
 # Create SQLAlchemy engine
-SQLALCHEMY_DATABASE_URL = "postgresql://user:password@host:port/dbname"
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:Lufiva@localhost:5432/predictions"
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 # Create SQLAlchemy session factory
