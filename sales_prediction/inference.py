@@ -4,7 +4,7 @@ import pandas as pd
 from sales_prediction.preprocessing import *
 from sales_prediction.__init__ import *
 import sys
-sys.path.append('./house_prices')
+sys.path.append('./sales_prediction')
 
 
 def make_predictions(input_data: pd.DataFrame) -> np.ndarray:
