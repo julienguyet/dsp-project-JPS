@@ -20,12 +20,10 @@ sys.path.append('./sales_prediction')
     return {"Here are our predictions using Random Forest": Y}'''
 
 
-def make_predictions(input_data: dict) -> dict:
-    # Convert the input dictionary to a DataFrame
-    df = pd.DataFrame(input_data)
+def make_predictions(input_data: pd.DataFrame) -> dict:
     
     # Preprocess the data and make predictions
-    df = create_time_feature(df)
+    df = create_time_feature(input_data)
     df = cpi_difference(df)
     clean_data = filling_na(df, TEST_FEATURES)
     clean_data.drop(columns=FEATURES_TO_DROP, inplace=True)
