@@ -1,0 +1,50 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "test_data_suite",
+  "expectations": [
+    {
+      "expectation_type": "expect_table_columns_to_match_ordered_list",
+      "kwargs": {
+        "column_list": [
+          "Dept",
+          "Store",
+          "Date",
+          "Weekly_Sales",
+          "Temperature",
+          "Fuel_Price",
+          "MarkDown1",
+          "MarkDown2",
+          "MarkDown3",
+          "MarkDown4",
+          "MarkDown5",
+          "CPI",
+          "Unemployment",
+          "IsHoliday",
+          "Type",
+          "Size"
+        ]
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "Date",
+        "mostly": 1.0
+      },
+      "meta": {}
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "CPI",
+        "mostly": 1.0
+      },
+      "meta": {}
+    }
+  ],
+  "ge_cloud_id": null,
+  "meta": {
+    "great_expectations_version": "0.18.12"
+  }
+}
