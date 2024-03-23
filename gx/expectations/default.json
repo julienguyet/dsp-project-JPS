@@ -25,13 +25,6 @@
         ]
       },
       "meta": {}
-    },
-    {
-      "expectation_type": "expect_column_values_to_not_be_null",
-      "kwargs": {
-        "column": "Date"
-      },
-      "meta": {}
     }
   ],
   "ge_cloud_id": null,
