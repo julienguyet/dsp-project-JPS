@@ -68,7 +68,8 @@ def train_data_encoder(df: pd.DataFrame, path: str) -> pd.DataFrame:
 
 def test_data_encoder(df: pd.DataFrame, path: str) -> pd.DataFrame:
 
-    encoder = joblib.load(os.path.join(path, 'one-hot-encoder.joblib'))
+    encoder_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'one-hot-encoder.joblib')
+    encoder = joblib.load(encoder_path)
     X_test_encoded = encoder.transform(df)
 
     return X_test_encoded

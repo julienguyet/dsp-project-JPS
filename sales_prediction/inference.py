@@ -31,8 +31,9 @@ def make_predictions(input_data: pd.DataFrame) -> dict:
     X_test_encoded = test_data_encoder(df=df, path=MODEL_BASE_PATH)
     
     # Load the model and make predictions
-    model = joblib.load('../models/random-forest.joblib')
+    model_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'random-forest.joblib')
+    model = joblib.load(model_path)
     Y = model.predict(X_test_encoded)
 
     # Return the predictions as a dictionary
-    return {"Here are our predictions using Random Forest": Y}
+    return {"Sales": Y}
