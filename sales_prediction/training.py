@@ -10,10 +10,10 @@ sys.path.append('./sales_prediction')
 
 
 def build_model(data: pd.DataFrame) -> dict[str, str]:
-    df = create_time_feature(data)
+    df = filling_na_train(data, data.columns)
+    df = create_time_feature(df)
     df = cpi_difference(df)
-    clean_data = filling_na(df, TRAIN_FEATURES)
-    X_train, X_test, y_train, y_test = data_split(clean_data)
+    X_train, X_test, y_train, y_test = data_split(df)
     X_train_encoded = train_data_encoder(df=X_train, path=MODEL_BASE_PATH)
     X_test_encoded = test_data_encoder(df=X_test, path=MODEL_BASE_PATH)
 

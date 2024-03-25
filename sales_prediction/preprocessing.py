@@ -7,11 +7,19 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import MinMaxScaler
 
 
-def filling_na(df: pd.DataFrame, columns: list) -> pd.DataFrame:
-    for col in columns:
-        df[col].fillna(value=0, inplace=True)
-    return df
+def filling_na_train(df: pd.DataFrame, columns: list) -> pd.DataFrame:
 
+    df.dropna(subset = ['Date'], inplace=True)
+    df['MarkDown1'].fillna(value=0, inplace=True)
+    df['MarkDown2'].fillna(value=0, inplace=True)
+    df['MarkDown3'].fillna(value=0, inplace=True)
+    df['MarkDown4'].fillna(value=0, inplace=True)
+    df['MarkDown5'].fillna(value=0, inplace=True)
+    df['CPI'].fillna(value=0, inplace=True)
+    df['Unemployment'].fillna(value=0, inplace=True)
+    df['IsHoliday'].fillna(value=False, inplace=True)
+    df['Type'].fillna(value='A', inplace=True)
+    return df
 
 def create_time_feature(df: pd.DataFrame) -> pd.DataFrame:
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
@@ -47,12 +55,14 @@ def data_split(df: pd.DataFrame) -> pd.DataFrame:
 
 def train_data_encoder(df: pd.DataFrame, path: str) -> pd.DataFrame:
 
+    #bool_cols = df.select_dtypes(include=bool).columns
+    #df[bool_cols] = df[bool_cols].astype(str)
+
     encoder = OneHotEncoder(handle_unknown='ignore')
     encoder.fit(df)
     X_train_encoded = encoder.transform(df)
     encoder_path = os.path.join(path, 'one-hot-encoder.joblib')
     joblib.dump(encoder, encoder_path)
-
     return X_train_encoded
 
 

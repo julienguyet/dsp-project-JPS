@@ -23,11 +23,12 @@ sys.path.append('./sales_prediction')
 def make_predictions(input_data: pd.DataFrame) -> dict:
     
     # Preprocess the data and make predictions
-    df = create_time_feature(input_data)
+    df = filling_na_train(input_data, input_data.columns)
+    df = create_time_feature(df)
     df = cpi_difference(df)
-    clean_data = filling_na(df, TEST_FEATURES)
-    clean_data.drop(columns=FEATURES_TO_DROP, inplace=True)
-    X_test_encoded = test_data_encoder(df=clean_data, path=MODEL_BASE_PATH)
+    
+    df.drop(columns=FEATURES_TO_DROP, inplace=True)
+    X_test_encoded = test_data_encoder(df=df, path=MODEL_BASE_PATH)
     
     # Load the model and make predictions
     model = joblib.load('../models/random-forest.joblib')
