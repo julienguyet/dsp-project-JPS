@@ -12,3 +12,9 @@ MODEL_BASE_PATH = '../models/'
 
 FEATURES_TO_DROP = ['Store','Weekly_Sales', 'Date', 'Fuel_Price',
                     'CPI', 'Unemployment', 'Type']
+
+GOOD_DATA_DIRECTORY = '../data/good_data'
+
+BAD_DATA_DIRECTORY = '../data/bad_data'
+
+RAW_DATA_DIRECTORY = '../data/raw_data'
