@@ -63,7 +63,7 @@ def main():
                 st.error("Failed to get prediction. Please try again.")
 
     elif page == "Past Predictions":
-        st.subheader("Past Predictions !")
+        st.subheader("Past Predictions")
         start_date = st.date_input('Start Date')
         end_date = st.date_input('End Date')
         submit_button = st.button("Get Data")
