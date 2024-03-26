@@ -161,4 +161,3 @@ cython_debug/
 data/
 .DS_Store
 airflow/
-dummy_data.csv
