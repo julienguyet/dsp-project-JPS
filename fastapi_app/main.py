@@ -1,17 +1,21 @@
 import os
 import sys
+import json
 sys.path.append('../')
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 import joblib
 import pandas as pd
-from sqlalchemy import create_engine, Column, Integer,Float, Boolean, String
+from sqlalchemy import create_engine, Column, Integer,Float, Boolean, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel, Field
 from sales_prediction.inference import make_predictions
 from sales_prediction import FEATURES_TO_DROP, MODEL_BASE_PATH, TEST_FEATURES
 from sales_prediction.preprocessing import cpi_difference, create_time_feature, test_data_encoder
+from datetime import datetime
+from typing import List, Optional
+from datetime import date
 
 
 
@@ -89,5 +93,31 @@ async def predict_features(features: FeatureInputRequest):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail= f"Internal Server Error {str(e)}")
+    finally:
+        db.close()
+
+
+@app.get("/past_prediction/")
+def past_prediction(start_date: date = Query(..., description="Start date (YYYY-MM-DD)"),
+                    end_date: date = Query(..., description="End date (YYYY-MM-DD)")) -> List[str]:
+    try:
+        print(f"Received request for past predictions between {start_date} and {end_date}")
+        
+        if start_date > end_date:
+            raise HTTPException(status_code=400, detail="End date must be after start date.")
+        
+        db = SessionLocal()
+        predictions = db.query(FeatureInput).filter(FeatureInput.pred_date.between(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))).all()
+        
+        if predictions:
+            prediction_dates = [str(prediction.pred_date) for prediction in predictions]
+            print(f"Predictions found: {prediction_dates}")
+            return prediction_dates
+        else:
+            print("No predictions found for the selected date range.")
+            raise HTTPException(status_code=404, detail="No predictions found for the selected date range.")
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
     finally:
         db.close()
