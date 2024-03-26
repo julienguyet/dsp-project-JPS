@@ -46,6 +46,7 @@ class FeatureInput(Base):
     Type = Column(String)
     Size = Column(Integer)
     Sales = Column(Float)
+    pred_date = Column(DateTime, default=datetime.utcnow)
 
 
 class FeatureInputRequest(BaseModel):
@@ -77,8 +78,6 @@ async def predict_features(features: FeatureInputRequest):
         db.add(feature_input)
         db.commit()
         db.refresh(feature_input)
-
-
 
         input_data = pd.DataFrame(features.dict(), index=[0])
         predictions = make_predictions(input_data)
