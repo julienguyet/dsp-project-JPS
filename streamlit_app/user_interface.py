@@ -32,7 +32,6 @@ def predict_sales(data):
     else:
         st.error("Failed to make predictions. Please check your input data.")
 
-
 def get_past_predictions(start_date, end_date):
     endpoint = f"{API_BASE_URL}/past_prediction/"
     params = {"start_date": start_date, "end_date": end_date}
@@ -42,15 +41,23 @@ def get_past_predictions(start_date, end_date):
     else:
         return None
 
-
 def main():
     st.title("Sales Prediction App")
 
-    # Sidebar
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Make Prediction", "Past Predictions"])
+    # Navigation bar
+    nav_option = st.sidebar.radio("Go to", ["Make Prediction", "Past Predictions"])
 
-    if page == "Make Prediction":
+    if nav_option == "Make Prediction":
+        make_prediction()
+
+    elif nav_option == "Past Predictions":
+        past_predictions()
+
+def make_prediction():
+    st.subheader("Input Data for Prediction")
+    input_option = st.radio("Select Input Method:", ("Fill the form", "Upload CSV"))
+
+    if input_option == "Fill the form":
         form_values = {}
         for key, value in default_values.items():
             form_values[key] = st.text_input(key, value)
@@ -62,26 +69,45 @@ def main():
             else:
                 st.error("Failed to get prediction. Please try again.")
 
-    elif page == "Past Predictions":
-        st.subheader("Past Predictions")
-        start_date = st.date_input('Start Date')
-        end_date = st.date_input('End Date')
-        submit_button = st.button("Get Data")
+    elif input_option == "Upload CSV":
+        st.subheader("Upload CSV for Multiple Predictions")
+        uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"])
 
-        if submit_button:
-            if start_date and end_date:
-                if start_date <= end_date:
-                    start_date_str = start_date.strftime('%Y-%m-%d')
-                    end_date_str = end_date.strftime('%Y-%m-%d')              
-                    data = get_past_predictions(start_date_str, end_date_str)
-                    if data:
-                        st.write('Predictions between selected dates:')
-                        st.write(data)
+        if uploaded_file is not None:
+            df = pd.read_csv(uploaded_file)
+            st.write(df)
+
+            if st.button("Predict"):
+                predictions = []
+                for index, row in df.iterrows():
+                    response = predict_sales(row.to_dict())
+                    if response is not None:
+                        predictions.append(response)
                     else:
-                        st.write('No predictions found for the selected date range.')
-                else:
-                    st.error('Error: End date must fall after start date.')
+                        predictions.append("Failed")
 
+                df['Predicted_Sales'] = predictions
+                st.write(df)
+
+def past_predictions():
+    st.subheader("Past Predictions")
+    start_date = st.date_input('Start Date')
+    end_date = st.date_input('End Date')
+    submit_button = st.button("Get Data")
+
+    if submit_button:
+        if start_date and end_date:
+            if start_date <= end_date:
+                start_date_str = start_date.strftime('%Y-%m-%d')
+                end_date_str = end_date.strftime('%Y-%m-%d')              
+                data = get_past_predictions(start_date_str, end_date_str)
+                if data:
+                    st.write('Predictions between selected dates:')
+                    st.write(data)
+                else:
+                    st.write('No predictions found for the selected date range.')
+            else:
+                st.error('Error: End date must fall after start date.')
 
 if __name__ == "__main__":
     main()
