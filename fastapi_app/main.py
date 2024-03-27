@@ -1,8 +1,9 @@
 import os
 import sys
 import json
+import io
 sys.path.append('../')
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Body
 from fastapi.responses import JSONResponse
 import joblib
 import pandas as pd
@@ -16,6 +17,8 @@ from sales_prediction.preprocessing import cpi_difference, create_time_feature, 
 from datetime import datetime
 from typing import List, Optional
 from datetime import date
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Union
 
 
 
@@ -68,30 +71,37 @@ class FeatureInputRequest(BaseModel):
     Size: int
 
 
-# API endpoint to receive input features, store them in the database, make predictions, and return the result
 @app.post("/predictval/")
-async def predict_features(features: FeatureInputRequest):
+async def predict_features(features: Union[FeatureInputRequest, UploadFile] = Body(None)):
     db = SessionLocal()
     try:
-        # Store input features in the database
-        feature_input = FeatureInput(**features.dict())
-        db.add(feature_input)
-        db.commit()
-        db.refresh(feature_input)
-
-        input_data = pd.DataFrame(features.dict(), index=[0])
-        predictions = make_predictions(input_data)
-
-        feature_input.Sales = predictions['Sales'][0]
-        db.add(feature_input)
-        db.commit()
-        db.refresh(feature_input)
-
-        return JSONResponse(content={"sales": float(predictions['Sales'][0])})
+        if isinstance(features, UploadFile):  # If uploaded file
+            content = await features.read()
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+            predictions = []
+            for _, row in df.iterrows():
+                input_data = row.to_dict()
+                predictions.append(make_predictions(pd.DataFrame(input_data, index=[0]))['Sales'][0])
+            return JSONResponse(content={"sales": predictions})
+        else:  # If form input       
+            feature_input = FeatureInput(**features.dict())
+            db.add(feature_input)
+            db.commit()
+            db.refresh(feature_input)
+    
+            input_data = pd.DataFrame(features.dict(), index=[0])
+            predictions = make_predictions(input_data)
+    
+            feature_input.Sales = predictions['Sales'][0]
+            db.add(feature_input)
+            db.commit()
+            db.refresh(feature_input)
+    
+            return JSONResponse(content={"sales": float(predictions['Sales'][0])})
     
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail= f"Internal Server Error {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
     finally:
         db.close()
 

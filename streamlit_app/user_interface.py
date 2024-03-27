@@ -23,14 +23,29 @@ default_values = {
     "Type": "",
     "Size": 0
 }
+def fill_empty_cells(data):
+    for key, value in default_values.items():
+        if pd.isnull(data[key]):
+            data[key] = value
+    return data
 
 def predict_sales(data):
     endpoint = f"{API_BASE_URL}/predictval/"
-    response = requests.post(endpoint, json=data)
-    if response.status_code == 200:
-        return response.json()["sales"]
-    else:
-        st.error("Failed to make predictions. Please check your input data.")
+    if isinstance(data, pd.DataFrame):  # If data is DataFrame, perform batch prediction
+        predictions = []
+        for _, row in data.iterrows():
+            response = requests.post(endpoint, json=row.to_dict())
+            if response.status_code == 200:
+                predictions.append(response.json()["sales"])
+            else:
+                predictions.append(None)
+        return predictions
+    else:  # Single prediction
+        response = requests.post(endpoint, json=data)
+        if response.status_code == 200:
+            return response.json()["sales"]
+        else:
+            return None
 
 def get_past_predictions(start_date, end_date):
     endpoint = f"{API_BASE_URL}/past_prediction/"
@@ -64,7 +79,11 @@ def make_prediction():
 
         if st.button("Predict"):
             response = predict_sales(form_values)
-            if response is not None:
+            if isinstance(response, list):  # Batch predictions
+                st.success("Predictions:")
+                for idx, pred in enumerate(response):
+                    st.write(f"Row {idx + 1}: {pred}")
+            elif response is not None:  # Single prediction
                 st.success(f"The predicted sales is: ${response:.2f}")
             else:
                 st.error("Failed to get prediction. Please try again.")
@@ -74,20 +93,17 @@ def make_prediction():
         uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"])
 
         if uploaded_file is not None:
-            df = pd.read_csv(uploaded_file)
-            st.write(df)
-
+            st.write("File Uploaded Successfully!")
+            uploaded_df = pd.read_csv(uploaded_file)
             if st.button("Predict"):
-                predictions = []
-                for index, row in df.iterrows():
-                    response = predict_sales(row.to_dict())
-                    if response is not None:
-                        predictions.append(response)
+                with st.spinner('Predicting...'):
+                    uploaded_df = uploaded_df.apply(fill_empty_cells, axis=1) 
+                    predictions = predict_sales(uploaded_df)
+                    if predictions:
+                        uploaded_df['Predicted_Sales'] = predictions
+                        st.write(uploaded_df)
                     else:
-                        predictions.append("Failed")
-
-                df['Predicted_Sales'] = predictions
-                st.write(df)
+                        st.error("Failed to get predictions. Please try again.")
 
 def past_predictions():
     st.subheader("Past Predictions")
