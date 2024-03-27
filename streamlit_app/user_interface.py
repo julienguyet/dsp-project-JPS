@@ -119,7 +119,8 @@ def past_predictions():
                 data = get_past_predictions(start_date_str, end_date_str)
                 if data:
                     st.write('Predictions between selected dates:')
-                    st.write(data)
+                    df = pd.DataFrame(data)
+                    st.write(df)
                 else:
                     st.write('No predictions found for the selected date range.')
             else:

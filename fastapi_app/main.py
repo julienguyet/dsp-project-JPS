@@ -108,7 +108,7 @@ async def predict_features(features: Union[FeatureInputRequest, UploadFile] = Bo
 
 @app.get("/past_prediction/")
 def past_prediction(start_date: date = Query(..., description="Start date (YYYY-MM-DD)"),
-                    end_date: date = Query(..., description="End date (YYYY-MM-DD)")) -> List[str]:
+                    end_date: date = Query(..., description="End date (YYYY-MM-DD)")) -> List[dict]:
     try:
         print(f"Received request for past predictions between {start_date} and {end_date}")
         
@@ -119,9 +119,33 @@ def past_prediction(start_date: date = Query(..., description="Start date (YYYY-
         predictions = db.query(FeatureInput).filter(FeatureInput.pred_date.between(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))).all()
         
         if predictions:
-            prediction_dates = [str(prediction.pred_date) for prediction in predictions]
-            print(f"Predictions found: {prediction_dates}")
-            return prediction_dates
+            serialized_predictions = []
+            for prediction in predictions:
+                serialized_prediction = {
+                    "id": prediction.id,
+                    "Store": prediction.Store,
+                    "Dept": prediction.Dept,
+                    "Date": prediction.Date,
+                    "Weekly_Sales": prediction.Weekly_Sales,
+                    "Temperature": prediction.Temperature,
+                    "Fuel_Price": prediction.Fuel_Price,
+                    "MarkDown1": prediction.MarkDown1,
+                    "MarkDown2": prediction.MarkDown2,
+                    "MarkDown3": prediction.MarkDown3,
+                    "MarkDown4": prediction.MarkDown4,
+                    "MarkDown5": prediction.MarkDown5,
+                    "CPI": prediction.CPI,
+                    "Unemployment": prediction.Unemployment,
+                    "IsHoliday": prediction.IsHoliday,
+                    "Type": prediction.Type,
+                    "Size": prediction.Size,
+                    "Sales": prediction.Sales,
+                    "pred_date": str(prediction.pred_date)
+                }
+                serialized_predictions.append(serialized_prediction)
+                
+            print(f"Predictions found: {serialized_predictions}")
+            return serialized_predictions
         else:
             print("No predictions found for the selected date range.")
             raise HTTPException(status_code=404, detail="No predictions found for the selected date range.")
