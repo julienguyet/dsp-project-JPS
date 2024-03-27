@@ -1,8 +1,9 @@
+# To simulate the environment 
+
 # To run the fast API app , in the root folder run 
 
 uvicorn fastapi_app.main:app --reload
 
 # To run Streamlit app , In the root folder run
 
-streamlit run app.py
-
+streamlit run user_interface.py --server.enableXsrfProtection=false
