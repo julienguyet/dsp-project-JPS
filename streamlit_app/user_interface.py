@@ -1,3 +1,4 @@
+import io
 import streamlit as st
 import requests
 import pandas as pd
@@ -31,21 +32,23 @@ def fill_empty_cells(data):
 
 def predict_sales(data):
     endpoint = f"{API_BASE_URL}/predictval/"
-    if isinstance(data, pd.DataFrame):  # If data is DataFrame, perform batch prediction
-        predictions = []
-        for _, row in data.iterrows():
-            response = requests.post(endpoint, json=row.to_dict())
-            if response.status_code == 200:
-                predictions.append(response.json()["sales"])
-            else:
-                predictions.append(None)
-        return predictions
-    else:  # Single prediction
-        response = requests.post(endpoint, json=data)
-        if response.status_code == 200:
+    if isinstance(data, pd.DataFrame): 
+
+        csv_string = data.to_csv(index=False)
+        csv_bytes = csv_string.encode()
+        csv_file = io.BytesIO(csv_bytes)
+        files = {'file': ("data.csv", csv_file)}
+        response = requests.post(endpoint, files=files)
+        
+    if response.status_code == 200:
+        try:
             return response.json()["sales"]
-        else:
+        except Exception as e:
+            print(f"Error parsing response JSON: {e}")
             return None
+    else:
+        print(f"Error: {response.status_code} - {response.text}")
+        return None
 
 def get_past_predictions(start_date, end_date):
     endpoint = f"{API_BASE_URL}/past_prediction/"
@@ -78,15 +81,14 @@ def make_prediction():
             form_values[key] = st.text_input(key, value)
 
         if st.button("Predict"):
-            response = predict_sales(form_values)
-            if isinstance(response, list):  # Batch predictions
-                st.success("Predictions:")
-                for idx, pred in enumerate(response):
-                    st.write(f"Row {idx + 1}: {pred}")
-            elif response is not None:  # Single prediction
-                st.success(f"The predicted sales is: ${response:.2f}")
-            else:
-                st.error("Failed to get prediction. Please try again.")
+            with st.spinner('Predicting...'):
+                df = pd.DataFrame([form_values])
+                response = predict_sales(df)
+                if response is not None:
+                    for idx, pred in enumerate(response):
+                        st.success(f"The predicted sales is: {pred:.2f}")
+                else:
+                    st.error("Failed to get prediction. Please try again.")
 
     elif input_option == "Upload CSV":
         st.subheader("Upload CSV for Multiple Predictions")
@@ -112,19 +114,20 @@ def past_predictions():
     submit_button = st.button("Get Data")
 
     if submit_button:
-        if start_date and end_date:
-            if start_date <= end_date:
-                start_date_str = start_date.strftime('%Y-%m-%d')
-                end_date_str = end_date.strftime('%Y-%m-%d')              
-                data = get_past_predictions(start_date_str, end_date_str)
-                if data:
-                    st.write('Predictions between selected dates:')
-                    df = pd.DataFrame(data)
-                    st.write(df)
+        with st.spinner('Getting past predictions...'):
+            if start_date and end_date:
+                if start_date <= end_date:
+                    start_date_str = start_date.strftime('%Y-%m-%d')
+                    end_date_str = end_date.strftime('%Y-%m-%d')              
+                    data = get_past_predictions(start_date_str, end_date_str)
+                    if data:
+                        st.write('Predictions between selected dates:')
+                        df = pd.DataFrame(data)
+                        st.write(df)
+                    else:
+                        st.write('No predictions found for the selected date range.')
                 else:
-                    st.write('No predictions found for the selected date range.')
-            else:
-                st.error('Error: End date must fall after start date.')
+                    st.error('Error: End date must fall after start date.')
 
 if __name__ == "__main__":
     main()

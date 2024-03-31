@@ -19,6 +19,7 @@ from typing import List, Optional
 from datetime import date
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Union
+from fastapi import File , UploadFile
 
 
 
@@ -72,35 +73,29 @@ class FeatureInputRequest(BaseModel):
 
 
 @app.post("/predictval/")
-async def predict_features(features: Union[FeatureInputRequest, UploadFile] = Body(None)):
+async def predict_features(file: UploadFile = File(None)):
     db = SessionLocal()
     try:
-        if isinstance(features, UploadFile):  # If uploaded file
-            content = await features.read()
+        if file:
+            content = await file.read()
             df = pd.read_csv(io.StringIO(content.decode('utf-8')))
             predictions = []
+
             for _, row in df.iterrows():
                 input_data = row.to_dict()
                 predictions.append(make_predictions(pd.DataFrame(input_data, index=[0]))['Sales'][0])
+
+            for i, pred in enumerate(predictions):
+                feature_input = FeatureInput(**df.iloc[i].to_dict())
+                feature_input.Sales = pred
+                db.add(feature_input)
+
+            db.commit()
             return JSONResponse(content={"sales": predictions})
-        else:  # If form input       
-            feature_input = FeatureInput(**features.dict())
-            db.add(feature_input)
-            db.commit()
-            db.refresh(feature_input)
-    
-            input_data = pd.DataFrame(features.dict(), index=[0])
-            predictions = make_predictions(input_data)
-    
-            feature_input.Sales = predictions['Sales'][0]
-            db.add(feature_input)
-            db.commit()
-            db.refresh(feature_input)
-    
-            return JSONResponse(content={"sales": float(predictions['Sales'][0])})
     
     except Exception as e:
         db.rollback()
+        print(f"Error: {str(e)}") 
         raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
     finally:
         db.close()
