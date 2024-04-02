@@ -36,7 +36,6 @@ class FeatureInput(Base):
     Store = Column(Integer)
     Dept = Column(Integer)
     Date = Column(String)
-    Weekly_Sales = Column(Float)
     Temperature = Column(Float)
     Fuel_Price = Column(Float)
     MarkDown1 = Column(Float)
@@ -57,7 +56,6 @@ class FeatureInputRequest(BaseModel):
     Store: int
     Dept: int
     Date: str
-    Weekly_Sales: float
     Temperature: float
     Fuel_Price: float
     MarkDown1: float
@@ -121,7 +119,6 @@ def past_prediction(start_date: date = Query(..., description="Start date (YYYY-
                     "Store": prediction.Store,
                     "Dept": prediction.Dept,
                     "Date": prediction.Date,
-                    "Weekly_Sales": prediction.Weekly_Sales,
                     "Temperature": prediction.Temperature,
                     "Fuel_Price": prediction.Fuel_Price,
                     "MarkDown1": prediction.MarkDown1,

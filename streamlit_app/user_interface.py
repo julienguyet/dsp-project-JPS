@@ -10,7 +10,6 @@ default_values = {
     "Store": 0,
     "Dept": 0,
     "Date": "2024-01-01",
-    "Weekly_Sales": 0.0,
     "Temperature": 0.0,
     "Fuel_Price": 0.0,
     "MarkDown1": 0.0,
@@ -61,8 +60,6 @@ def get_past_predictions(start_date, end_date):
 
 def main():
     st.title("Sales Prediction App")
-
-    # Navigation bar
     nav_option = st.sidebar.radio("Go to", ["Make Prediction", "Past Predictions"])
 
     if nav_option == "Make Prediction":
