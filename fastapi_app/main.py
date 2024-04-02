@@ -136,7 +136,6 @@ def past_prediction(start_date: date = Query(..., description="Start date (YYYY-
                 }
                 serialized_predictions.append(serialized_prediction)
                 
-            print(f"Predictions found: {serialized_predictions}")
             return serialized_predictions
         else:
             print("No predictions found for the selected date range.")
