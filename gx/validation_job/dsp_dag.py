@@ -14,7 +14,7 @@ DataValidationResults = namedtuple(
 
 @dag(
     start_date = datetime(2024, 3, 27),
-    schedule = "@daily",
+    schedule = "*/1 * * * *",
     tags = ["DSP"],
     catchup = False
 )
