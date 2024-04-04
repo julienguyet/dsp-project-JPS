@@ -1,6 +1,12 @@
 # Environment Setup
 
+In order to replicate the environment, clone the repository, activate you virtual environment and then run:
 
+```
+pip install -r requirements.txt
+```
+
+Now you can move to the next steps
 
 # Airflow Tutorial
 A Git Repository to demonstrate a simple data validation job using Airflow: we will run an airflow job every one minute to check the data quality of a file and remove bad data from our ingestion pipeline.
@@ -16,6 +22,8 @@ Go to below link and follow instructions based on your OS. Once installation is 
 https://docs.astronomer.io/astro/cli/install-cli
 
 ## 3. Set up Astro
+If you wish to create your own airflow folder, follow the steps below. If you cloned the repository and would like to use the provided airflow folder, you can jump to section 4.
+
 Move to your directory where you created your repo and at the root, in terminal, do in order:
 
 ```
