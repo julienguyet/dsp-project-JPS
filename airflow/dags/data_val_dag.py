@@ -16,6 +16,16 @@ DataValidationResults = namedtuple(
     "DataValidationResults", ["df", "corrupted_ratio", "rows", "file_path"]
 )
 
+db_params = {
+    "host": "localhost",
+    "database": "public",
+    "user": "postgres",
+    "password": "ma_databas€"
+    }
+
+teams_webhook = "https://epitafr.webhook.office.com/webhookb2/20776877-17e6-405b-bf9f-f0810f814f2a@3534b3d7-316c-4bc9-9ede-605c860f49d2/IncomingWebhook/1a33c6e51db14cb5861ae1833b3e578b/f5fc93d8-16f4-4ce7-950b-5f1d0d1c64dc"
+report_directory = "/usr/local/airflow/dags/reports"
+
 @dag(
     start_date = datetime(2024, 3, 27),
     schedule = "*/1 * * * *",
@@ -180,31 +190,49 @@ def data_validation_dag():
             conn = psycopg2.connect(**db_params)
             cur = conn.cursor()
 
+            # Get current date and time
+            current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
             for result in validation_results:
                 row_index = result["row_index"]
                 failed_rules = result["failed_rules"]
+                success_rules = result["passed_rules"]
 
-                # Iterate over the failed rules for this row
+                # Calculate relevant statistics
+                rows = len(failed_rules) + len(success_rules)
+                missing_values = len(failed_rules)
+                percentage = missing_values / rows if rows > 0 else 0
+
+                # Determine criticality based on percentage
+                if percentage == 0:
+                    criticality = 1
+                elif percentage <= 0.25:
+                    criticality = 2
+                elif percentage <= 0.5:
+                    criticality = 3
+                elif percentage <= 0.75:
+                    criticality = 4
+                else:
+                    criticality = 5
+
                 for rule in failed_rules:
-                    # Increment the corresponding statistic in the database
                     cur.execute(sql.SQL("""
-                        UPDATE data_quality_statistics
-                        SET count = count + 1
-                        WHERE rule = %s
-                    """), (rule,))
+                        INSERT INTO data_quality_errors (date, rule, rows, missing_values, percentage, criticality)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """), (current_datetime, rule, rows, missing_values, percentage, criticality))
                     conn.commit()
 
             # Close the cursor and connection
             cur.close()
             conn.close()
 
-            print("Alerts sent and statistics updated successfully.")
+            print("Data errors saved successfully.")
 
         except (Exception, psycopg2.Error) as error:
             print("Error while connecting to PostgreSQL:", error)
 
     @task
-    def send_alerts(validation_results, db_params, teams_webhook, report_file):
+    def send_alerts(validation_results, db_params, teams_webhook, report_directory):
         try:
             # Establish a connection to the PostgreSQL database
             conn = psycopg2.connect(**db_params)
@@ -223,6 +251,14 @@ def data_validation_dag():
             env = Environment(loader=FileSystemLoader('.'))
             template = env.get_template('validation_report_template.html')
             html_content = template.render(validation_results=validation_results)
+
+            # Create report directory if it doesn't exist
+            if not os.path.exists(report_directory):
+                os.makedirs(report_directory)
+
+            # Generate report file path
+            report_date = datetime.now().strftime("%Y-%m-%d")
+            report_file = os.path.join(report_directory, f'data_val_report_{report_date}.html')
 
             # Write HTML content to file
             with open(report_file, 'w') as f:
@@ -282,15 +318,10 @@ def data_validation_dag():
     
 
     # Task relationships
-
-    db_params = {
-    "host": "your_host",
-    "database": "your_database",
-    "user": "your_user",
-    "password": "your_password"
-    }
-
-    teams_webhook = "https://epitafr.webhook.office.com/webhookb2/20776877-17e6-405b-bf9f-f0810f814f2a@3534b3d7-316c-4bc9-9ede-605c860f49d2/IncomingWebhook/1a33c6e51db14cb5861ae1833b3e578b/f5fc93d8-16f4-4ce7-950b-5f1d0d1c64dc"
-    report_file = "data_validation_report.html"
+    df, file_path = read_data()
+    results = validate_data(df, file_path)
+    save_data_errors(results, db_params)
+    send_alerts(results, db_params, teams_webhook, report_directory)
+    save_file(results)
 
 data_validation_dag()
