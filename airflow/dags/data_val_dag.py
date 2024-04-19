@@ -37,12 +37,10 @@ def data_validation_dag():
 
     @task
     def read_data() -> (pd.DataFrame, str):
-
         raw_data_directory = '/usr/local/airflow/dags/corrupted_data'
         random_file = random.choice(os.listdir(raw_data_directory))
         file_path = os.path.join(raw_data_directory, random_file)
         df = ge.read_csv(file_path)
-
         return df, file_path
 
     @task
