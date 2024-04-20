@@ -1,8 +1,9 @@
 import os
 import sys
 import json
+import io
 sys.path.append('../')
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Body
 from fastapi.responses import JSONResponse
 import joblib
 import pandas as pd
@@ -16,6 +17,9 @@ from sales_prediction.preprocessing import cpi_difference, create_time_feature, 
 from datetime import datetime
 from typing import List, Optional
 from datetime import date
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Union
+from fastapi import File , UploadFile
 
 
 
@@ -32,7 +36,6 @@ class FeatureInput(Base):
     Store = Column(Integer)
     Dept = Column(Integer)
     Date = Column(String)
-    Weekly_Sales = Column(Float)
     Temperature = Column(Float)
     Fuel_Price = Column(Float)
     MarkDown1 = Column(Float)
@@ -53,7 +56,6 @@ class FeatureInputRequest(BaseModel):
     Store: int
     Dept: int
     Date: str
-    Weekly_Sales: float
     Temperature: float
     Fuel_Price: float
     MarkDown1: float
@@ -68,37 +70,38 @@ class FeatureInputRequest(BaseModel):
     Size: int
 
 
-# API endpoint to receive input features, store them in the database, make predictions, and return the result
 @app.post("/predictval/")
-async def predict_features(features: FeatureInputRequest):
+async def predict_features(file: UploadFile = File(None)):
     db = SessionLocal()
     try:
-        # Store input features in the database
-        feature_input = FeatureInput(**features.dict())
-        db.add(feature_input)
-        db.commit()
-        db.refresh(feature_input)
+        if file:
+            content = await file.read()
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+            predictions = []
 
-        input_data = pd.DataFrame(features.dict(), index=[0])
-        predictions = make_predictions(input_data)
+            for _, row in df.iterrows():
+                input_data = row.to_dict()
+                predictions.append(make_predictions(pd.DataFrame(input_data, index=[0]))['Sales'][0])
 
-        feature_input.Sales = predictions['Sales'][0]
-        db.add(feature_input)
-        db.commit()
-        db.refresh(feature_input)
+            for i, pred in enumerate(predictions):
+                feature_input = FeatureInput(**df.iloc[i].to_dict())
+                feature_input.Sales = pred
+                db.add(feature_input)
 
-        return JSONResponse(content={"sales": float(predictions['Sales'][0])})
+            db.commit()
+            return JSONResponse(content={"sales": predictions})
     
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail= f"Internal Server Error {str(e)}")
+        print(f"Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
     finally:
         db.close()
 
 
 @app.get("/past_prediction/")
 def past_prediction(start_date: date = Query(..., description="Start date (YYYY-MM-DD)"),
-                    end_date: date = Query(..., description="End date (YYYY-MM-DD)")) -> List[str]:
+                    end_date: date = Query(..., description="End date (YYYY-MM-DD)")) -> List[dict]:
     try:
         print(f"Received request for past predictions between {start_date} and {end_date}")
         
@@ -109,9 +112,31 @@ def past_prediction(start_date: date = Query(..., description="Start date (YYYY-
         predictions = db.query(FeatureInput).filter(FeatureInput.pred_date.between(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))).all()
         
         if predictions:
-            prediction_dates = [str(prediction.pred_date) for prediction in predictions]
-            print(f"Predictions found: {prediction_dates}")
-            return prediction_dates
+            serialized_predictions = []
+            for prediction in predictions:
+                serialized_prediction = {
+                    "id": prediction.id,
+                    "Store": prediction.Store,
+                    "Dept": prediction.Dept,
+                    "Date": prediction.Date,
+                    "Temperature": prediction.Temperature,
+                    "Fuel_Price": prediction.Fuel_Price,
+                    "MarkDown1": prediction.MarkDown1,
+                    "MarkDown2": prediction.MarkDown2,
+                    "MarkDown3": prediction.MarkDown3,
+                    "MarkDown4": prediction.MarkDown4,
+                    "MarkDown5": prediction.MarkDown5,
+                    "CPI": prediction.CPI,
+                    "Unemployment": prediction.Unemployment,
+                    "IsHoliday": prediction.IsHoliday,
+                    "Type": prediction.Type,
+                    "Size": prediction.Size,
+                    "Sales": prediction.Sales,
+                    "pred_date": str(prediction.pred_date)
+                }
+                serialized_predictions.append(serialized_prediction)
+                
+            return serialized_predictions
         else:
             print("No predictions found for the selected date range.")
             raise HTTPException(status_code=404, detail="No predictions found for the selected date range.")

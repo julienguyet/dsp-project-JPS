@@ -48,7 +48,7 @@ def cpi_difference(df: pd.DataFrame) -> pd.DataFrame:
 
 def data_split(df: pd.DataFrame) -> pd.DataFrame:
     X_train, X_test, y_train, y_test = train_test_split(df.drop(columns=['Store','Weekly_Sales', 'Date', 'Fuel_Price',
-                                                                         'CPI', 'Unemployment', 'Type']), df['Weekly_Sales'])
+                                                                        'CPI', 'Unemployment', 'Type']), df['Weekly_Sales'])
 
     return X_train, X_test, y_train, y_test
 
