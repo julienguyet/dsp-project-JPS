@@ -48,17 +48,25 @@ def validate_data_dag():
 
     @task
     def validate_data(file_path: str) -> dict:
-
+        
         context = gx.get_context()
         validator = context.sources.pandas_default.read_csv(file_path)
-        df = pd.read_csv(file_path)
+
+        result_format: dict = {
+        "result_format": "COMPLETE",
+        "unexpected_index_column_names": ["Store","Dept","Date","Temperature","Fuel_Price",
+                                        "MarkDown1","MarkDown2","MarkDown3","MarkDown4","MarkDown5",
+                                        "CPI","Unemployment","IsHoliday","Type","Size"],}
+        
         validator.expect_table_columns_to_match_ordered_list(column_list=["Store","Dept","Date","Temperature",
                                                                                                     "Fuel_Price","MarkDown1","MarkDown2",
                                                                                                     "MarkDown3","MarkDown4","MarkDown5",
                                                                                                     "CPI","Unemployment","IsHoliday","Type","Size"])
-        # Execute all the validation rules
-        for column in df.columns:
-            validator.expect_column_values_to_not_be_null(column=column)
+        
+        to_not_be_null = ["Store","Dept","Date","Temperature","Fuel_Price","CPI","Unemployment","IsHoliday","Type","Size"]
+        
+        for col in to_not_be_null:
+            validator.expect_column_values_to_not_be_null(column=col)
         
         validator.expect_column_values_to_be_of_type(column="Store", type_='int64')
         validator.expect_column_values_to_be_of_type(column="Dept", type_='int64')
@@ -82,9 +90,10 @@ def validate_data_dag():
             name="dsp_checkpoint",
             validator=validator
         )
-        checkpoint_result = checkpoint.run()
+        checkpoint_result = checkpoint.run(result_format=result_format)
+        result_json = checkpoint_result.to_json_dict()
 
-        return checkpoint_result
+        return checkpoint_result, result_json
 
     @task
     def save_data_errors(db_params, result_json):
@@ -207,7 +216,13 @@ def validate_data_dag():
 
     @task
     def save_file(checkpoint_result: dict, file_path) -> None:
-        
+
+        numeric_columns = ['Store', 'Dept','Temperature', 'Fuel_Price','MarkDown1',
+                    'MarkDown2', 'MarkDown3', 'MarkDown4', 'MarkDown5', 'CPI','Unemployment' ]
+        type_valid_values = ["A", "B", "C"]
+        holidays_valid_values = ["True", "False"]
+
+        result_json = checkpoint_result.to_json_dict()
         run_results = result_json.get("run_results", {})
         key = list(checkpoint_result.get_statistics()['validation_statistics'])[0]
         statistics = checkpoint_result.get_statistics()['validation_statistics'][key]
@@ -221,33 +236,79 @@ def validate_data_dag():
         file_path_good_data = os.path.join(good_data_directory, f'good_data_{ts}.csv')
         file_path_bad_data = os.path.join(bad_data_directory, f'bad_data_{ts}.csv')
 
-        indexes = []
+        rows = []
+        column_names = []
 
         for expectation_identifier, expectation_result in run_results.items():
             validation_result = expectation_result.get("validation_result", {})
             success = validation_result.get("success", False)
             results = validation_result.get("results", [])
             for result in results:
-                result_info = result.get("result", {})
-                rows = result_info.get("partial_unexpected_index_list")
-                if rows != None:
-                    for row in rows:
-                        if row not in indexes:
-                            indexes.append(row)
+                result_expectation = result.get("expectation_config")
+                if result_expectation.get("expectation_type") != "expect_column_values_to_be_of_type":
+                    result_info = result.get("result", {})
+                    unexpected_index_query = result_info.get("unexpected_index_query")
+                    if unexpected_index_query is not None and unexpected_index_query != "None":
+                        print(unexpected_index_query)
+                        rows.append(unexpected_index_query)
+            for item in results:
+                if item.get("success") == False and result_expectation.get("expectation_type") == "expect_column_values_to_be_of_type" :
+                    if 'kwargs' in item['expectation_config']:
+                        kwargs = item['expectation_config']['kwargs']
+                        if 'column' in kwargs:
+                            column_names.append(kwargs['column'])
 
-        print(corrupted_ratio)
-        print(file_path)
+        numbers_only = []
+        for element in rows:
+            numbers = re.findall(r'\d+', element)
+            numbers_only.append(numbers)
+
+        flattened_numbers = [number for sublist in numbers_only for number in sublist]
+        flattened_numbers = [int(number) for number in flattened_numbers]
+
+        rows_to_drop = np.unique(flattened_numbers)
+        columns_to_check = np.unique(column_names)
+
+        print(f"Len of DF: {len(df)}")
+        print(f"Len of rows_to_keep: {len(rows_to_drop)}")
+
+        rows_to_keep = []
+        for i in range(len(df)):
+            if i not in rows_to_drop:
+                rows_to_keep.append(i)
+        
+        print(f"rows to drop: {rows_to_drop}")
+        print(f"length of rows to drop: {len(rows_to_drop)}")
         
         if corrupted_ratio == 0.0:
             shutil.move(file_path, os.path.join(good_data_directory, os.path.basename(file_path)))
             print("file moved to good_data_directory")
-        elif corrupted_ratio <= 50:
-            good_data = df.drop(index=indexes)
-            bad_data = df.iloc[indexes]
-            good_data.to_csv(file_path_good_data) 
+
+        elif corrupted_ratio <= 90:
+            good_data = df.filter(items=rows_to_keep, axis=0)
+            indices = []
+
+            for idx, row in good_data.iterrows():
+                try:
+                    pd.to_numeric(row[numeric_columns], errors='raise')
+                    indices.append(idx)
+                except ValueError:
+                    pass
+
+            good_df = good_data.loc[indices]
+            good_df[numeric_columns] = good_df[numeric_columns].astype(float)
+            good_df = good_df[(good_df["Size"] >= 0)]
+            good_df = good_df[(good_df["Fuel_Price"] >= 0)]
+            good_df = good_df[(good_df["Unemployment"] >= 0)]
+            good_df = good_df[good_df['Type'].isin(type_valid_values)]
+            good_df = good_df[good_df['IsHoliday'].isin(holidays_valid_values)]
+
+            bad_data = df.filter(items=rows_to_drop, axis=0)
+            good_df.to_csv(file_path_good_data) 
             bad_data.to_csv(file_path_bad_data)
             os.remove(file_path)
             print("removed bad data from file")
+
         else:
             shutil.move(file_path, os.path.join(bad_data_directory, os.path.basename(file_path)))
             print("file corrupted ratio is too high, we drop it")
