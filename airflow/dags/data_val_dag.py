@@ -2,7 +2,7 @@ from airflow.decorators import dag, task
 from airflow.operators.python import PythonOperator
 from airflow.models import XCom
 from datetime import datetime
-import os
+import os, glob
 import random
 import great_expectations as gx
 import shutil
@@ -16,10 +16,6 @@ from pymsteams import connectorcard
 import urllib.parse
 import re
 
-DataValidationResults = namedtuple(
-    "DataValidationResults", ["df", "corrupted_ratio", "rows", "file_path"]
-)
-
 db_params = {
     "host": "localhost",
     "port": 5433,
@@ -29,7 +25,7 @@ db_params = {
 }
 
 teams_webhook = "https://epitafr.webhook.office.com/webhookb2/20776877-17e6-405b-bf9f-f0810f814f2a@3534b3d7-316c-4bc9-9ede-605c860f49d2/IncomingWebhook/1a33c6e51db14cb5861ae1833b3e578b/f5fc93d8-16f4-4ce7-950b-5f1d0d1c64dc"
-report_directory = "/usr/local/airflow/dags/reports"
+report_directory = "../../gx/uncommitted/data_docs/local_site/validations/default/__none__"
 
 @dag(
     start_date = datetime(2024, 3, 27),
@@ -42,14 +38,15 @@ def validate_data_dag():
 
     @task
     def read_data() -> str:
-        raw_data_directory = '/usr/local/airflow/dags/corrupted_data'
+        raw_data_directory = '/Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/dags/corrupted_data'
         random_file = random.choice(os.listdir(raw_data_directory))
         file_path = os.path.join(raw_data_directory, random_file)
         return file_path
 
     @task
     def validate_data(file_path: str) -> dict:
-        
+    
+        # Part I - Check Rules
         context = gx.get_context()
         validator = context.sources.pandas_default.read_csv(file_path)
 
@@ -92,16 +89,22 @@ def validate_data_dag():
             validator=validator
         )
         checkpoint_result = checkpoint.run(result_format=result_format)
-        result_json = checkpoint_result.to_json_dict()
-
-        return checkpoint_result, result_json
-
-    @task
-    def save_data_errors(db_params, result_json):
-
-        current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        run_results = result_json.get("run_results", {})
         
+
+        # Part II - Statistics
+        stats_key = list(checkpoint_result.get_statistics()['validation_statistics'])[0]
+        result_json = checkpoint_result.get("run_results")
+        statistics = checkpoint_result.get_statistics()['validation_statistics'][stats_key]
+        report_link = result_json.get('run_results', {}).get(list(result_json.get('run_results', {}))[0], {}).get('actions_results', {}).get('update_data_docs', {}).get('local_site', None)
+        encoded_report_link = urllib.parse.quote(report_link, safe=':/')
+
+        total_expectations = statistics["evaluated_expectations"]
+        successful_expectations = statistics["successful_expectations"]
+        failed_expectations = statistics["unsuccessful_expectations"]
+        percentage = statistics["success_percent"]
+
+        # Part III - Errors retrieval
+        run_results = checkpoint_result.get("run_results", {})
         expectation_data = {}
 
         for expectation_identifier, expectation_result in run_results.items():
@@ -134,6 +137,73 @@ def validate_data_dag():
                     "unexpected_count": unexpected_count,
                     "unexpected_percent": unexpected_percent
                 })
+        
+        # Part IV - Retrieve bad rows
+        result_json = checkpoint_result.get("run_results")
+        key_stats = list(checkpoint_result.get_statistics()['validation_statistics'])[0]
+        statistics = checkpoint_result.get_statistics()['validation_statistics'][key_stats]
+        succcess_ratio = statistics["success_percent"]
+        result_dict_key = list(result_json.keys())[0]
+        validation_result_info = result_json[result_dict_key]['validation_result']
+
+        flag = False
+
+        if validation_result_info['results'][0]["success"] == False and validation_result_info['results'][0]["expectation_config"]["expectation_type"] == "expect_table_columns_to_match_ordered_list":
+            flag = True
+        else:
+            flag = False
+        
+        rows = []
+        column_names = []
+
+        for expectation_identifier, expectation_result in run_results.items():
+            validation_result = expectation_result.get("validation_result", {})
+            success = validation_result.get("success", False)
+            results = validation_result.get("results", [])
+
+        for result in results:
+            result_expectation = result.get("expectation_config")
+            if result_expectation.get("expectation_type") != "expect_column_values_to_be_of_type":
+                result_info = result.get("result", {})
+                unexpected_index_query = result_info.get("unexpected_index_query")
+                if unexpected_index_query is not None and unexpected_index_query != "None":
+                    print(unexpected_index_query)
+                    rows.append(unexpected_index_query)
+        for item in results:
+            if item.get("success") == False and result_expectation.get("expectation_type") == "expect_column_values_to_be_of_type":
+                if 'kwargs' in item['expectation_config']:
+                    kwargs = item['expectation_config']['kwargs']
+                    if 'column' in kwargs:
+                        column_names.append(kwargs['column'])
+        
+
+        return total_expectations, successful_expectations, failed_expectations, percentage, encoded_report_link, expectation_data, succcess_ratio, flag, rows, column_names
+
+    @task
+    def send_alerts(total_expectations, successful_expectations, failed_expectations, percentage, encoded_report_link, teams_webhook):
+
+        status = ""
+
+        if percentage < 20:
+            status = "LOW"
+        if 20 < percentage < 50:
+            status = "MEDIUM"
+        if 50 < percentage < 80:
+            status = "MAJOR"
+        else:
+            status = "CRITIC"
+        
+        alert = connectorcard(teams_webhook)
+        alert.title(f"{status} ALERT")
+        alert.text(f"{successful_expectations} rules succeeded, and {failed_expectations} rules failed out of {total_expectations}. Success ratio: {percentage}. To open the report in terminal, from dag folder run: `cd {encoded_report_link} && open *.html `")
+        alert.send()
+        
+        print("Alert sent successfully.")
+    
+    @task
+    def save_data_errors(db_params, expectation_data):
+
+        current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Connect to the PostgreSQL database
         conn = psycopg2.connect(
@@ -182,53 +252,14 @@ def validate_data_dag():
         conn.close()
 
         print("Data errors saved successfully.")
-
+    
     @task
-    def send_alerts(checkpoint_result, result_json, teams_webhook):
-
-        key = list(checkpoint_result.get_statistics()['validation_statistics'])[0]
-        report_link = result_json.get('run_results', {}).get(list(result_json.get('run_results', {}))[0], {}).get('actions_results', {}).get('update_data_docs', {}).get('local_site', None)
-        encoded_report_link = urllib.parse.quote(report_link, safe=':/')
-        statistics = checkpoint_result.get_statistics()['validation_statistics'][key]
-
-        total_expectations = statistics["evaluated_expectations"]
-        successful_expectations = statistics["successful_expectations"]
-        failed_expecations = statistics["unsuccessful_expectations"]
-        percentage = statistics["success_percent"]
-
-        status = ""
-
-        if percentage < 20:
-            status = "LOW"
-        if 20 < percentage < 50:
-            status = "MEDIUM"
-        if 50 < percentage < 80:
-            status = "MAJOR"
-        else:
-            stayus = "CRITIC"
-
-        alert = connectorcard(teams_webhook)
-        alert.title(f"{status} ALERT")
-        alert.text(f"{successful_expectations} rules succeeded, and {failed_expecations} rules failed out of {total_expectations}. Success ratio: {percentage}. To open the report in terminal run: `cd {encoded_report_link[7:149]} && open *.html `")
-        alert.send()
-
-        print("Alert sent successfully.")
-
-
-    @task
-    def save_file(checkpoint_result: dict, result_json, file_path) -> None:
+    def save_file(success_ratio, flag, rows, column_names, file_path) -> None:
 
         numeric_columns = ['Store', 'Dept','Temperature', 'Fuel_Price','MarkDown1',
                     'MarkDown2', 'MarkDown3', 'MarkDown4', 'MarkDown5', 'CPI','Unemployment' ]
         type_valid_values = ["A", "B", "C"]
         holidays_valid_values = ["True", "False"]
-
-        run_results = result_json.get("run_results", {})
-        key = list(checkpoint_result.get_statistics()['validation_statistics'])[0]
-        statistics = checkpoint_result.get_statistics()['validation_statistics'][key]
-        succcess_ratio = statistics["success_percent"]
-        result_dict = result_json.get("run_results")
-        result_dict_key = list(result_dict.keys())[0]
 
         df = pd.read_csv(file_path)
         ct = datetime.now()
@@ -238,34 +269,10 @@ def validate_data_dag():
         file_path_good_data = os.path.join(good_data_directory, f'good_data_{ts}.csv')
         file_path_bad_data = os.path.join(bad_data_directory, f'bad_data_{ts}.csv')
 
-        rows = []
-        column_names = []
-
-        validation_result_info = result_dict[result_dict_key]['validation_result']
-
-        if validation_result_info['results'][0]["success"] == False and validation_result_info['results'][0]["expectation_config"]["expectation_type"] == "expect_table_columns_to_match_ordered_list":
+        if flag == True:
             shutil.move(file_path, os.path.join(bad_data_directory, os.path.basename(file_path)))
             print(f"Columns are in wrong order vs expectations, file store to bad data directory under name {os.path.join(bad_data_directory, os.path.basename(file_path))}")
         else:
-            for expectation_identifier, expectation_result in run_results.items():
-                validation_result = expectation_result.get("validation_result", {})
-                success = validation_result.get("success", False)
-                results = validation_result.get("results", [])
-                for result in results:
-                    result_expectation = result.get("expectation_config")
-                    if result_expectation.get("expectation_type") != "expect_column_values_to_be_of_type":
-                        result_info = result.get("result", {})
-                        unexpected_index_query = result_info.get("unexpected_index_query")
-                        if unexpected_index_query is not None and unexpected_index_query != "None":
-                            print(unexpected_index_query)
-                            rows.append(unexpected_index_query)
-                for item in results:
-                    if item.get("success") == False and result_expectation.get("expectation_type") == "expect_column_values_to_be_of_type":
-                        if 'kwargs' in item['expectation_config']:
-                            kwargs = item['expectation_config']['kwargs']
-                            if 'column' in kwargs:
-                                column_names.append(kwargs['column'])
-
             numbers_only = []
             for element in rows:
                 numbers = re.findall(r'\d+', element)
@@ -275,7 +282,6 @@ def validate_data_dag():
             flattened_numbers = [int(number) for number in flattened_numbers]
 
             rows_to_drop = np.unique(flattened_numbers)
-            columns_to_check = np.unique(column_names)
 
             print(f"Len of DF: {len(df)}")
             print(f"Len of rows_to_keep: {len(rows_to_drop)}")
@@ -288,11 +294,11 @@ def validate_data_dag():
             print(f"rows to drop: {rows_to_drop}")
             print(f"length of rows to drop: {len(rows_to_drop)}")
             
-            if succcess_ratio == 0.0:
+            if success_ratio == 0.0:
                 shutil.move(file_path, os.path.join(good_data_directory, os.path.basename(file_path)))
                 print("file moved to good_data_directory")
 
-            elif succcess_ratio >= 50:
+            elif success_ratio >= 50:
                 good_data = df.filter(items=rows_to_keep, axis=0)
                 indices = []
 
@@ -322,9 +328,9 @@ def validate_data_dag():
 
     # Task relationships
     file_path = read_data()
-    checkpoint_result, result_json = validate_data(file_path)
-    send_alerts(checkpoint_result, result_json, teams_webhook)
-    save_data_errors(db_params, result_json)
-    save_file(checkpoint_result, result_json, file_path)
+    total_expectations, successful_expectations, failed_expectations, percentage, encoded_report_link, expectation_data, success_ratio, flag, rows, column_names = validate_data(file_path, report_directory)
+    send_alerts(total_expectations, successful_expectations, failed_expectations, percentage, encoded_report_link, teams_webhook)
+    save_data_errors(db_params, expectation_data)
+    save_file(success_ratio, flag, rows, column_names, file_path)
 
 validate_data_dag()
