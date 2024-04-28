@@ -32,12 +32,20 @@ def validate_data(file_path: str) -> dict:
                                     "MarkDown1","MarkDown2","MarkDown3","MarkDown4","MarkDown5",
                                     "CPI","Unemployment","IsHoliday","Type","Size"],}
     
+    expected_columns = ["Store","Dept","Date","Temperature","Fuel_Price",
+                        "MarkDown1","MarkDown2","MarkDown3","MarkDown4","MarkDown5",
+                        "CPI","Unemployment","IsHoliday","Type","Size"]
+    
+    to_not_be_null = ["Store","Dept","Date","Temperature","Fuel_Price","CPI","Unemployment","IsHoliday","Type","Size"]
+
+    for col in expected_columns:
+        validator.expect_column_to_exist(column=col)
+
     validator.expect_table_columns_to_match_ordered_list(column_list=["Store","Dept","Date","Temperature",
                                                                                                 "Fuel_Price","MarkDown1","MarkDown2",
                                                                                                 "MarkDown3","MarkDown4","MarkDown5",
                                                                                                 "CPI","Unemployment","IsHoliday","Type","Size"])
     
-    to_not_be_null = ["Store","Dept","Date","Temperature","Fuel_Price","CPI","Unemployment","IsHoliday","Type","Size"]
     
     for col in to_not_be_null:
         validator.expect_column_values_to_not_be_null(column=col)
@@ -119,16 +127,19 @@ def validate_data(file_path: str) -> dict:
     result_json = checkpoint_result.get("run_results")
     key_stats = list(checkpoint_result.get_statistics()['validation_statistics'])[0]
     statistics = checkpoint_result.get_statistics()['validation_statistics'][key_stats]
-    succcess_ratio = statistics["success_percent"]
+    success_ratio = statistics["success_percent"]
     result_dict_key = list(result_json.keys())[0]
     validation_result_info = result_json[result_dict_key]['validation_result']
 
     flag = False
 
-    if validation_result_info['results'][0]["success"] == False and validation_result_info['results'][0]["expectation_config"]["expectation_type"] == "expect_table_columns_to_match_ordered_list":
-        flag = True
-    else:
-        flag = False
+    for i in range(0,3):
+        if validation_result_info['results'][i]["success"] == False and validation_result_info['results'][i]["expectation_config"]["expectation_type"] == "expect_table_columns_to_match_ordered_list":
+            flag = True
+        elif validation_result_info['results'][i]["success"] == False and validation_result_info['results'][i]["expectation_config"]["expectation_type"] == "expect_column_to_exist":
+            flag = True
+        else:
+            flag = False
     
     rows = []
     column_names = []
@@ -154,24 +165,27 @@ def validate_data(file_path: str) -> dict:
                     column_names.append(kwargs['column'])
     
 
-    return total_expectations, successful_expectations, failed_expectations, percentage, encoded_report_link, expectation_data, succcess_ratio, flag, rows, column_names
+    return total_expectations, successful_expectations, failed_expectations, percentage, encoded_report_link, expectation_data, success_ratio, flag, rows, column_names
 
-def send_alerts(total_expectations, successful_expectations, failed_expectations, percentage, encoded_report_link, teams_webhook):
+def send_alerts(report_directory, total_expectations, successful_expectations, failed_expectations, percentage, encoded_report_link, teams_webhook):
 
+    bash_latest_folder = "latest_folder=$(ls -td */ | head -n 1)"
+    bash_cd_latest_folder = 'cd "$latest_folder" && open *.html'
+    
     status = ""
 
-    if percentage < 20:
+    if float(percentage) < 20:
         status = "LOW"
-    if 20 < percentage < 50:
+    if 20 < float(percentage) < 50:
         status = "MEDIUM"
-    if 50 < percentage < 80:
+    if 50 < float(percentage) < 80:
         status = "MAJOR"
     else:
         status = "CRITIC"
     
     alert = connectorcard(teams_webhook)
     alert.title(f"{status} ALERT")
-    alert.text(f"{successful_expectations} rules succeeded, and {failed_expectations} rules failed out of {total_expectations}. Success ratio: {percentage}. To open the report in terminal, from dag folder run: `cd {encoded_report_link} && open *.html `")
+    alert.text(f"{successful_expectations} rules succeeded, and {failed_expectations} rules failed out of {total_expectations}. Success ratio: {percentage}. To open the report in terminal, from dag folder run in order: \n`cd {report_directory}` \n `{bash_latest_folder}` \n `{bash_cd_latest_folder}`")
     alert.send()
     
     print("Alert sent successfully.")
@@ -202,13 +216,13 @@ def save_data_errors(db_params, expectation_data):
             percentage = entry['unexpected_percent']
             # Calculate criticality based on percentage, adjust as needed
             criticality = 0
-            if percentage == 0:
+            if float(percentage) == 0:
                     criticality = 1
-            elif percentage <= 0.25:
+            elif float(percentage) <= 0.25:
                 criticality = 2
-            elif percentage <= 0.5:
+            elif float(percentage) <= 0.5:
                 criticality = 3
-            elif percentage <= 0.75:
+            elif float(percentage) <= 0.75:
                 criticality = 4
             else:
                 criticality = 5
@@ -270,7 +284,7 @@ def save_file(good_data_directory, bad_data_directory, success_ratio, flag, rows
             shutil.move(file_path, os.path.join(good_data_directory, os.path.basename(file_path)))
             print("file moved to good_data_directory")
 
-        elif success_ratio >= 50:
+        elif float(success_ratio) >= 50:
             good_data = df.filter(items=rows_to_keep, axis=0)
             indices = []
 

@@ -32,7 +32,7 @@ dag = DAG(
     'validation_job',
     default_args=default_args,
     description='A DAG to check data expectations',
-    schedule_interval="* * * * *"
+    schedule_interval="* * * * *",
 )
 
 read_data_task = PythonOperator(
@@ -56,15 +56,16 @@ send_alerts_task = PythonOperator(
             'successful_expectations': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[1] }}",
             'failed_expectations': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[2] }}",
             'percentage': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[3] }}",
+            'report_directory': REPORT_DIRECTORY,
             'encoded_report_link': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[4] }}",
-            'teams_webhook': os.environ.get("TEAMS_WEBHOOK")},
+            'teams_webhook': TEAMS_WEBHOOK},
     dag=dag
 )
 
 save_data_errors_task = PythonOperator(
     task_id='save_data_errors',
     python_callable=save_data_errors,
-    op_kwargs={'db_params': os.environ.get("DB_PARAMS"),
+    op_kwargs={'db_params': DB_PARAMS,
             'expectation_data': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[5] }}"},
     dag=dag
 )
