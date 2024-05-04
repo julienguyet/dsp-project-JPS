@@ -195,13 +195,21 @@ def save_data_errors(db_params, expectation_data):
     current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # Connect to the PostgreSQL database
+    #conn = psycopg2.connect(
+     #   dbname=db_params['database'],
+      #  user=db_params['user'],
+       # password=db_params['password'],
+        #host=db_params['host'],
+        #port=db_params['port']
+    #)
+
     conn = psycopg2.connect(
-        dbname=db_params['database'],
-        user=db_params['user'],
-        password=db_params['password'],
-        host=db_params['host'],
-        port=db_params['port']
-    )
+    dbname='postgres',
+    user='postgres',
+    password='postgres',
+    host='127.0.0.1', 
+    port=5432
+)
 
     # Create a cursor object using the cursor() method
     cursor = conn.cursor()
