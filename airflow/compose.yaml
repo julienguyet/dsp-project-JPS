@@ -23,7 +23,11 @@ volumes:
 
 services:
   postgres:
-    image: docker.io/postgres:12.6
+    image: postgres:14.11
+    environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_DB=postgres
     restart: unless-stopped
     networks:
       - airflow
@@ -31,8 +35,7 @@ services:
       io.astronomer.docker: "true"
       io.astronomer.docker.cli: "true"
     ports:
-      - 127.0.0.1:5432:5432
-      - 127.0.0.1:5433:5433
+      - 5432:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
     extra_hosts:
@@ -56,19 +59,14 @@ services:
       io.astronomer.docker.component: "airflow-scheduler"
     depends_on:
       - postgres
-    environment: *common-env-vars
+    environment: 
+      <<: *common-env-vars  # Use common environment variables
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+
     volumes:
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/dags:/usr/local/airflow/dags:z
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/plugins:/usr/local/airflow/plugins:z
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/include:/usr/local/airflow/include:z
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/tests:/usr/local/airflow/tests:z
-
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/airflow_settings.yaml:/usr/local/airflow/airflow_settings.yaml:z
-
-      
+      # Add your volume mappings here
       - airflow_logs:/usr/local/airflow/logs
-      
-    
 
   webserver:
     image: airflow_3650aa/airflow:latest
@@ -90,25 +88,21 @@ services:
     depends_on:
       - scheduler
       - postgres
-    environment: *common-env-vars
-    ports:
-      - 127.0.0.1:5432:5432
+    environment: 
+      <<: *common-env-vars  # Use common environment variables
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://postgres:postgres@127.0.0.1:5432/postgres
 
     volumes:
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/dags:/usr/local/airflow/dags:z
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/plugins:/usr/local/airflow/plugins:z
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/include:/usr/local/airflow/include:z
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/tests:/usr/local/airflow/tests:z
-      
+      # Add your volume mappings here
       - airflow_logs:/usr/local/airflow/logs
-      
+
     healthcheck:
       test: curl --fail http://webserver:8080/health || exit 1
       interval: 2s
       retries: 15
       start_period: 5s
       timeout: 60s
-    
 
   triggerer:
     image: airflow_3650aa/airflow:latest
@@ -124,13 +118,11 @@ services:
       io.astronomer.docker.component: "airflow-triggerer"
     depends_on:
       - postgres
-    environment: *common-env-vars
-    volumes:
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/dags:/usr/local/airflow/dags:z
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/plugins:/usr/local/airflow/plugins:z
-      - /Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow/include:/usr/local/airflow/include:z
-      
-      - airflow_logs:/usr/local/airflow/logs
-      
-    
+    environment: 
+      <<: *common-env-vars  # Use common environment variables
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://postgres:postgres@127.0.0.1:5432/postgres
 
+    volumes:
+      # Add your volume mappings here
+      - airflow_logs:/usr/local/airflow/logs

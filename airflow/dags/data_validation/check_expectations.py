@@ -194,22 +194,14 @@ def save_data_errors(db_params, expectation_data):
 
     current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Connect to the PostgreSQL database
-    #conn = psycopg2.connect(
-     #   dbname=db_params['database'],
-      #  user=db_params['user'],
-       # password=db_params['password'],
-        #host=db_params['host'],
-        #port=db_params['port']
-    #)
-
+    # Connect to PostgreSQL
     conn = psycopg2.connect(
-    dbname='postgres',
-    user='postgres',
-    password='postgres',
-    host='127.0.0.1', 
-    port=5432
-)
+        host=db_params['host'],
+        port=db_params['port'],
+        database=db_params['database'],
+        user=db_params['user'],
+        password=db_params['password']
+    )
 
     # Create a cursor object using the cursor() method
     cursor = conn.cursor()
@@ -249,6 +241,70 @@ def save_data_errors(db_params, expectation_data):
     conn.close()
 
     print("Data errors saved successfully.")
+
+
+'''
+def save_data_errors(db_params, expectation_data):
+
+    current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Connect to the PostgreSQL database
+    #conn = psycopg2.connect(
+     #   dbname=db_params['database'],
+      #  user=db_params['user'],
+       # password=db_params['password'],
+        #host=db_params['host'],
+        #port=db_params['port']
+    #)
+
+    # Connect to PostgreSQL
+    conn = psycopg2.connect(
+        host="127.0.0.1",
+        port="5432",
+        database="postgres",
+        user="postgres",
+        password="postgres"
+    )
+
+    # Create a cursor object using the cursor() method
+    cursor = conn.cursor()
+
+    # Loop through the expectation data and insert into the database
+    for column, data in expectation_data.items():
+        for entry in data:
+            # Extract relevant information
+            rule = entry['expectation_type']
+            rows = entry['element_count']
+            missing_values = entry['unexpected_count']
+            percentage = entry['unexpected_percent']
+            # Calculate criticality based on percentage, adjust as needed
+            criticality = 0
+            if float(percentage) == 0:
+                    criticality = 1
+            elif float(percentage) <= 0.25:
+                criticality = 2
+            elif float(percentage) <= 0.5:
+                criticality = 3
+            elif float(percentage) <= 0.75:
+                criticality = 4
+            else:
+                criticality = 5
+
+            # Prepare SQL query to insert data
+            insert_query = sql.SQL("INSERT INTO data_quality_errors (date, rule, rows, missing_values, percentage, criticality) VALUES (%s, %s, %s, %s, %s, %s)")
+
+            # Execute the SQL query
+            cursor.execute(insert_query, (current_datetime, rule, rows, missing_values, percentage, criticality))
+
+    # Commit changes
+    conn.commit()
+
+    # Close the cursor and connection
+    cursor.close()
+    conn.close()
+
+    print("Data errors saved successfully.")
+    '''
 
 def save_file(good_data_directory, bad_data_directory, success_ratio, flag, rows, file_path) -> None:
 
