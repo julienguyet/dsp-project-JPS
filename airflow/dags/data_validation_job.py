@@ -32,7 +32,7 @@ dag = DAG(
     'validation_job',
     default_args=default_args,
     description='A DAG to check data expectations',
-    schedule_interval="* * * * *",
+    schedule_interval="*/5 * * * *",
 )
 
 read_data_task = PythonOperator(
@@ -65,10 +65,19 @@ send_alerts_task = PythonOperator(
 save_data_errors_task = PythonOperator(
     task_id='save_data_errors',
     python_callable=save_data_errors,
+    #postgres_conn_id = "postgres_localhost",
     op_kwargs={'db_params': DB_PARAMS,
             'expectation_data': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[5] }}"},
     dag=dag
 )
+
+'''save_data_errors_task = PythonOperator(
+    task_id='save_data_errors',
+    python_callable=save_data_errors,
+    op_kwargs={'db_params': DB_PARAMS,
+            'expectation_data': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[5] }}"},
+    dag=dag
+)'''
 
 save_file_task = PythonOperator(
     task_id='save_file',
