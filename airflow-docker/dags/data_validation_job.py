@@ -36,6 +36,7 @@ dag = DAG(
     default_args=default_args,
     description='A DAG to check data expectations',
     schedule_interval="*/5 * * * *",
+    catchup = False,
 )
 
 read_data_task = PythonOperator(
