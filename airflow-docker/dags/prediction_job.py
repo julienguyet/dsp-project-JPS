@@ -1,8 +1,11 @@
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator, ShortCircuitOperator
+from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from datetime import datetime
 import os
+import requests
 import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), 'data_validation'))
 from data_validation.__init__ import GOOD_DATA_DIRECTORY
 
@@ -14,6 +17,7 @@ default_args = {
 }
 
 data_folder = GOOD_DATA_DIRECTORY
+fastapi_url = "http://localhost:8000"
 
 def check_files(data_folder):
     record_file_path = os.path.join(data_folder, "processed_files.txt")
@@ -40,6 +44,12 @@ def predict_new_files(**kwargs):
     new_files = task_instance.xcom_pull(task_ids='check_for_new_data')
     if new_files:
         print("Processing new files:", new_files)
+        # Forward new files to FastAPI
+        response = requests.post(fastapi_url, json={"new_files": new_files})
+        if response.status_code == 200:
+            print("New files forwarded to FastAPI successfully")
+        else:
+            print("Failed to forward new files to FastAPI:", response.text)
     else:
         print("No new files to process")
 
@@ -58,8 +68,9 @@ with DAG(
     )
 
     prediction_task = PythonOperator(
-        task_id='process_new_files',
+        task_id='make_predictions',
         python_callable=predict_new_files,
     )
 
     check_files_task >> prediction_task
+
