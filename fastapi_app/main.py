@@ -25,7 +25,7 @@ from fastapi import File , UploadFile
 
 app = FastAPI()
 
-DATABASE_URL = "postgresql://siva:siva@localhost/jsp"
+DATABASE_URL = "postgresql://airflow:airflow@localhost:5432/postgres" #"postgresql://siva:siva@localhost/jsp"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
