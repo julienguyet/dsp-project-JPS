@@ -26,7 +26,7 @@ docker compose up
 ## 3. Run the container and set up environment
 Open the docker app on your laptop and run the container you just created. You should see something like this:
 
--- image link --
+<img width="983" alt="Screenshot 2024-05-14 at 16 05 22" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/e69cd600-7def-4559-9a0f-ed857500c950">
 
 In the aiflow-docker directory, go to the 'dags' folder and execute the below commands:
 ```
@@ -41,7 +41,8 @@ mkdir good_data
 ```
 mkdir corrupted_data
 ```
-Finally, access the postgres database created by the container using Dbeaver or PGAdmin (or any tool you like for database management). Select your database and execute the SQL query below:
+Finally, access the postgres database created by the container using Dbeaver or PGAdmin (or any tool you like for database management). Select your database and execute the SQL queries below:
+
 ```
 -- Create table for storing data quality errors
 CREATE TABLE data_quality_errors (
@@ -55,33 +56,36 @@ CREATE TABLE data_quality_errors (
 );
 ```
 
-Then, you can use the code from the generate_files_final.ipynb file (available here: https://github.com/julienguyet/airflow-tutorial/blob/main/notebooks/generate_files_final.ipynb). 
+```
+CREATE TABLE features (
+        id SERIAL PRIMARY KEY,
+        "Store" FLOAT,
+        "Dept" FLOAT,
+        "Date" VARCHAR,
+        "Weekly_Sales" FLOAT,
+        "Temperature" FLOAT,
+        "Fuel_Price" FLOAT,
+        "MarkDown1" FLOAT,
+        "MarkDown2" FLOAT,
+        "MarkDown3" FLOAT,
+        "MarkDown4" FLOAT,
+        "MarkDown5" FLOAT,
+        "CPI" FLOAT,
+        "Unemployment" FLOAT,
+        "IsHoliday" BOOLEAN,
+        "Type" VARCHAR,
+        "Size" FLOAT,
+        "Sales" FLOAT,
+        "pred_date" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+```
+
+## 4. Create the files
+
+Go to the notebook folder in your repository and open the generate_files_final.ipynb file (available here: https://github.com/julienguyet/airflow-tutorial/blob/main/notebooks/generate_files_final.ipynb). 
 This code creates data partitions including some issues in it (so we fake real life problems such as missing data in a ML pipeline). 
 Do not forget to update the paths based on your own set up. 
 Please note that the data used was from the Walmart Sales Prediction competition on Kaggle. You can download the it here: https://www.kaggle.com/datasets/aslanahmedov/walmart-sales-forecast
 
-If you would like to work with your own dataset, please note you will need to update the Great Expectations rules defined in the Airflow Dag (line 34 and 35).
-
-## 5. Execute the DAG
-In your terminal, at the level of the airlfow folder, run the below:
-
-```
-astro dev start
-```
-
-You should see something like this:
-
-<img width="650" alt="astro_start_up" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/47ebb979-e306-4636-9c88-e1c1df8fe418">
-
-
-This will start Airflow and a new tab will open in your browser. Connect by using the default credentials (admin / admin). 
-You should see the dag in the list on the first page:
-
-<img width="1511" alt="airflow_home_page" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/6d163054-7f8e-404a-a8ba-295f90a64ded">
-
-
-Click on the left button to activate it and voilà: You now have a dag running every one minute to check the quality of your data!
-You can also get more details by clicking on the DAG and go to its graph tab:
-
-<img width="1196" alt="airflow_workflow" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/77ef1337-8de9-439a-8864-9a7578f2dcd5">
+If you would like to work with your own dataset, please note you will need to update the Great Expectations rules defined in the Airflow Dag.
 
