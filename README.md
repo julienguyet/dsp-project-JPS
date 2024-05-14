@@ -9,12 +9,12 @@ pip install -r requirements.txt
 Now you can move to the next steps
 
 # Airflow Tutorial
-A Git Repository to demonstrate a simple data validation job using Airflow: we will run an airflow job every one minute to check the data quality of a file and remove bad data from our ingestion pipeline.
+A Git Repository to demonstrate a data validation job using Airflow: we will run an airflow job every one minute to check the data quality of a file and remove bad data from our ingestion pipeline. Then, another dag will make API calls to run ML predictions on the data we cleaned in the previous step.
 If you would like to replicate this environment on your own machine, you can follow the steps below. 
 
 ## 1. Install Docker
 The first thing to do is to install docker (if already installed, you can move to step 2).
-Go to https://www.docker.com/get-started/ and follow the instructions based on your OS.
+Go to this [link](https://www.docker.com/get-started/) and follow the instructions based on your OS.
 
 ## 2. Build the container
 Now, go to the airflow-docker folder and open a terminal. Then run the below command to build the container.
@@ -41,6 +41,7 @@ mkdir good_data
 ```
 mkdir corrupted_data
 ```
+
 Finally, access the postgres database created by the container using Dbeaver or PGAdmin (or any tool you like for database management). Select your database and execute the SQL queries below:
 
 ```
@@ -85,10 +86,10 @@ GRANT INSERT, UPDATE, DELETE ON TABLE features TO myuser;
 
 ## 4. Create the files
 
-Go to the notebook folder in your repository and open the generate_files_final.ipynb file (available here: https://github.com/julienguyet/airflow-tutorial/blob/main/notebooks/generate_files_final.ipynb). 
+Go to the notebook folder in your repository and open the generate_files_final.ipynb file (available [here](https://github.com/julienguyet/airflow-tutorial/blob/main/notebooks/generate_files_final.ipynb)). 
 This code creates data partitions including some issues in it (so we fake real life problems such as missing data in a ML pipeline). 
 Do not forget to update the paths based on your own set up. 
-Please note that the data used was from the Walmart Sales Prediction competition on Kaggle. You can download the it here: https://www.kaggle.com/datasets/aslanahmedov/walmart-sales-forecast
+Please note that the data used was from the Walmart Sales Prediction competition on Kaggle. You can download the it on [Kaggle](https://www.kaggle.com/datasets/aslanahmedov/walmart-sales-forecast).
 
 If you would like to work with your own dataset, please note you will need to update the Great Expectations rules defined in the Airflow Dag.
 
@@ -102,3 +103,30 @@ Then, in the docker app, run your container and in your browser go to http://loc
 Click on "add new record" and select Postgres as connection type. Then fill in the fields with your corresponding credentials. For example, ours looks like this:
 
 <img width="484" alt="Screenshot 2024-05-14 at 16 21 44" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/92232d22-3ad9-4441-8494-dd2b17bb63d7">
+
+## 6. Create http connection
+
+While you are in the connections section of Airflow, create a new one and this time select type as HTTP. Fill in the following fields as below and leave the rest empty:
+- Connection Id: http_conn_id
+- Host: host.docker.internal
+- Port: 8000
+
+## 7. Create Teams Webhook
+
+If you wish to receive alerts to your Microsoft Teams, you can follow instructions at this [link](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook?tabs=newteams%2Cdotnet). Then update the TEAMS_WEBHOOK variable in the __init__.py file in the airflow-docker/dags_data_validation folder. 
+
+## 8. Run the Airflow Dags
+
+In your terminal, at the root of the directory, execute below commands:
+```
+uvicorn fastapi_app.main:app --reload
+```
+```
+streamlit run streamlit_app/user_interface.py --server.enableXsrfProtection=false
+```
+
+The first one will start the Fast API and the second open the streamlit app where you can manually upload files or insert data to run the prediction job. 
+
+Finally, go back to the Airflow home and active the two dags like below:
+
+<img width="291" alt="Screenshot 2024-05-14 at 16 44 04" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/6ab3dad9-60cd-4eef-a92f-bdbd8d2a60ba">
