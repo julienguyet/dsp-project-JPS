@@ -66,34 +66,6 @@ send_alerts_task = PythonOperator(
     dag=dag
 )
 
-# Generate random rule
-random_rule = f"rule_{random.randint(1, 100)}"
-# Generate random values for rows, missing_values, percentage, and criticality
-rows = random.randint(100, 1000)
-missing_values = random.randint(0, rows)
-percentage = random.uniform(0, 100)
-criticality = random.randint(1, 5)
-date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-# Define the SQL query to insert data into the PostgreSQL table
-query = """
-    INSERT INTO data_quality_errors (date, rule, rows, missing_values, percentage, criticality)
-    VALUES (%s, %s, %s, %s, %s, %s)
-"""
-
-# Parameters for the query
-parameters = (date, random_rule, rows, missing_values, percentage, criticality)
-
-'''# Create the PostgresOperator task
-save_data_errors_task = PostgresOperator(
-    task_id='save_data_errors_to_postgres',
-    postgres_conn_id='postgres_localhost',
-    sql=query,
-    parameters=parameters
-)'''
-
-#postgres_hook = PostgresHook(postgres_conn_id='postgres_localhost')
-
 save_data_errors_task = PythonOperator(
     task_id='save_data_errors_to_postgres',
     python_callable=save_data_errors,
