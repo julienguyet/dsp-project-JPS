@@ -57,7 +57,7 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
@@ -98,6 +98,29 @@ services:
       retries: 5
       start_period: 5s
     restart: always
+  '''
+  fastapi:
+    image: python:3.9
+    command: uvicorn fastapi_app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fastapi_app:/sources/fastapi_app
+    depends_on:
+      - postgres
+    restart: always
+
+  streamlit:
+    image: python:3.9
+    command: streamlit run /sources/streamlit_app/user_interface.py
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./streamlit_app:/sources/streamlit_app
+    depends_on:
+      - postgres
+    restart: always
+  '''
 
   airflow-webserver:
     <<: *airflow-common
