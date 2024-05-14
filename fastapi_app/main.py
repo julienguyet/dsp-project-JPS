@@ -98,6 +98,36 @@ async def predict_features(file: UploadFile = File(None)):
     finally:
         db.close()
 
+@app.post("/airflow/predict")
+async def predict_from_airflow(file: UploadFile = File(None)):
+    db = SessionLocal()
+    try:
+        if file:
+            content = await file.read()
+            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+            predictions = []
+
+            for _, row in df.iterrows():
+                input_data = row.to_dict()
+                predictions.append(make_predictions(pd.DataFrame(input_data, index=[0]))['Sales'][0])
+
+            for i, pred in enumerate(predictions):
+                feature_input = FeatureInput(**df.iloc[i].to_dict())
+                feature_input.Sales = pred
+                feature_input_dict = {k: v if not pd.isna(v) else None for k, v in df.iloc[i].to_dict().items()}
+                feature_input = FeatureInput(**feature_input_dict)
+                db.add(feature_input)
+
+            db.commit()
+            return JSONResponse(content={"sales": predictions})
+    
+    except Exception as e:
+        db.rollback()
+        print(f"Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
+    finally:
+        db.close()
+
 
 @app.get("/past_prediction/")
 def past_prediction(start_date: date = Query(..., description="Start date (YYYY-MM-DD)"),
