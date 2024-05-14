@@ -96,7 +96,9 @@ If you would like to work with your own dataset, please note you will need to up
 
 To be able to save data to your database when Airflow runs, you need to update the database URL. First, in the fastapi_app main.py replace DATABASE_URL with yours.
 Then, in the docker app, run your container and in your browser go to http://localhost:8080/home . Log in using the default credentials (admin/admin). In the admin tab go to "connections" section:
+
 <img width="793" alt="Screenshot 2024-05-14 at 16 19 16" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/ad664c5c-b412-474c-b9a0-d4d26330eff6">
 
 Click on "add new record" and select Postgres as connection type. Then fill in the fields with your corresponding credentials. For example, ours looks like this:
+
 <img width="484" alt="Screenshot 2024-05-14 at 16 21 44" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/92232d22-3ad9-4441-8494-dd2b17bb63d7">
