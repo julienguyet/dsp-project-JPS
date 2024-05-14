@@ -16,35 +16,19 @@ If you would like to replicate this environment on your own machine, you can fol
 The first thing to do is to install docker (if already installed, you can move to step 2).
 Go to https://www.docker.com/get-started/ and follow the instructions based on your OS.
 
-## 2. Install Astro
-Now, we will install Astro which is an environment manager for Airflow and Docker. It will make our life easier by setting up the environment and managing the connection between Docker and Airflow.
-Go to below link and follow instructions based on your OS. Once installation is finished move to step 3. 
-https://docs.astronomer.io/astro/cli/install-cli
-
-## 3. Set up Astro
-If you wish to create your own airflow folder, follow the steps below. If you cloned the repository and would like to use the provided airflow folder, you can jump to section 4.
-
-Move to your directory where you created your repo and at the root, in terminal, do in order:
+## 2. Build the container
+Now, go to the airflow-docker folder and open a terminal. Then run the below command to build the container.
 
 ```
-mkdir airflow
+docker compose up 
 ```
 
-```
-cd airflow
-```
+## 3. Run the container and set up environment
+Open the docker app on your laptop and run the container you just created. You should see something like this:
 
-Once you are inside the airflow directory execute the below command. It will initialize your Astro environment:
-```
-astro dev init
-```
+-- image link --
 
-You should now see new files and folders added to the airflow directory. Please note that by default astro will add the airflow folder to the .gitignore file.
-
-## 4. Create the Airflow DAG
-In your aiflow directory, go to the 'dags' folder and save here the 'data_validation_dag.py' file available at: https://github.com/julienguyet/airflow-tutorial/blob/main/airflow/dags/data_validation_dag.py
-
-After that, in the dag folder execute the below commands:
+In the aiflow-docker directory, go to the 'dags' folder and execute the below commands:
 ```
 mkdir raw_data
 ```
@@ -53,6 +37,22 @@ mkdir bad_data
 ```
 ```
 mkdir good_data
+```
+```
+mkdir corrupted_data
+```
+Finally, access the postgres database created by the container using Dbeaver or PGAdmin (or any tool you like for database management). Select your database and execute the SQL query below:
+```
+-- Create table for storing data quality errors
+CREATE TABLE data_quality_errors (
+    id SERIAL PRIMARY KEY,
+    date TIMESTAMP,
+    rule VARCHAR(255),
+    rows INT,
+    missing_values INT,
+    percentage FLOAT,
+    criticality INT
+);
 ```
 
 Then, you can use the code from the generate_files_final.ipynb file (available here: https://github.com/julienguyet/airflow-tutorial/blob/main/notebooks/generate_files_final.ipynb). 
