@@ -165,3 +165,7 @@ airflow/dags/good_data
 airflow/dags/raw_data
 airflow/dags/corrupted_data
 .DS_Store
+airflow-docker/dags/bad_data
+airflow-docker/dags/good_data
+airflow-docker/dags/raw_data
+airflow-docker/dags/corrupted_data

@@ -97,7 +97,7 @@ save_data_errors_task = PostgresOperator(
 save_data_errors_task = PythonOperator(
     task_id='save_data_errors_to_postgres',
     python_callable=save_data_errors,
-    provide_context=True,  # Allows accessing context variables like expectation_data
+    provide_context=True,
     dag=dag
 )
 

@@ -422,8 +422,8 @@ def save_file(good_data_directory, bad_data_directory, success_ratio, flag, rows
             good_df = good_df[good_df['IsHoliday'].isin(holidays_valid_values)]
 
             bad_data = df.filter(items=rows_to_drop, axis=0)
-            good_df.to_csv(file_path_good_data) 
-            bad_data.to_csv(file_path_bad_data)
+            good_df.to_csv(file_path_good_data, index=False) 
+            bad_data.to_csv(file_path_bad_data, index=False)
             os.remove(file_path)
             print("removed bad data from file")
         else:
