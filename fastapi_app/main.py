@@ -24,6 +24,7 @@ from sqlalchemy import Column, Integer, Float, Boolean, String, BigInteger, Date
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 from pydantic import BaseModel
+import time
 
 
 
@@ -33,9 +34,9 @@ DATABASE_URL = "postgresql://airflow:airflow@localhost:5432/postgres" #"postgres
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
+'''
 class FeatureInput(Base):
-    __tablename__ = "features"
+    __tablename__ = "feature"
     id = Column(Integer, primary_key=True, index=True)
     Store = Column(Integer)
     Dept = Column(Integer)
@@ -72,7 +73,45 @@ class FeatureInputRequest(BaseModel):
     IsHoliday: bool
     Type: str
     Size: int
+'''
+class FeatureInput(Base):
+    __tablename__ = "feature"
+    id = Column(Integer, primary_key=True, index=True)
+    Store = Column(Float)
+    Dept = Column(Float)
+    Date = Column(String)
+    Temperature = Column(Float)
+    Fuel_Price = Column(Float)
+    MarkDown1 = Column(Float)
+    MarkDown2 = Column(Float)
+    MarkDown3 = Column(Float)
+    MarkDown4 = Column(Float)
+    MarkDown5 = Column(Float)
+    CPI = Column(Float)
+    Unemployment = Column(Float)
+    IsHoliday = Column(Boolean)
+    Type = Column(String)
+    Size = Column(Float)
+    Sales = Column(Float)
+    pred_date = Column(DateTime, default=datetime.utcnow)
 
+
+class FeatureInputRequest(BaseModel):
+    Store: float
+    Dept: float
+    Date: str
+    Temperature: float
+    Fuel_Price: float
+    MarkDown1: float
+    MarkDown2: float
+    MarkDown3: float
+    MarkDown4: float
+    MarkDown5: float
+    CPI: float
+    Unemployment: float
+    IsHoliday: bool
+    Type: str
+    Size: float
 
 @app.post("/predictval/")
 async def predict_features(file: UploadFile = File(None)):
@@ -158,6 +197,7 @@ async def predict_features(filepaths: list = Body(...)):
                 feature_input.Sales = pred
                 db.add(feature_input)
                 db.commit()
+            time.sleep(5)
 
         #db.commit()
         return JSONResponse(content={"sales": predictions})
