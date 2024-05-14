@@ -34,46 +34,7 @@ DATABASE_URL = "postgresql://airflow:airflow@localhost:5432/postgres" #"postgres
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-'''
-class FeatureInput(Base):
-    __tablename__ = "feature"
-    id = Column(Integer, primary_key=True, index=True)
-    Store = Column(Integer)
-    Dept = Column(Integer)
-    Date = Column(String)
-    Temperature = Column(Float)
-    Fuel_Price = Column(Float)
-    MarkDown1 = Column(Float)
-    MarkDown2 = Column(Float)
-    MarkDown3 = Column(Float)
-    MarkDown4 = Column(Float)
-    MarkDown5 = Column(Float)
-    CPI = Column(Float)
-    Unemployment = Column(Float)
-    IsHoliday = Column(Boolean)
-    Type = Column(String)
-    Size = Column(Integer)
-    Sales = Column(Float)
-    pred_date = Column(DateTime, default=datetime.utcnow)
 
-
-class FeatureInputRequest(BaseModel):
-    Store: int
-    Dept: int
-    Date: str
-    Temperature: float
-    Fuel_Price: float
-    MarkDown1: float
-    MarkDown2: float
-    MarkDown3: float
-    MarkDown4: float
-    MarkDown5: float
-    CPI: float
-    Unemployment: float
-    IsHoliday: bool
-    Type: str
-    Size: int
-'''
 class FeatureInput(Base):
     __tablename__ = "feature"
     id = Column(Integer, primary_key=True, index=True)
@@ -141,36 +102,6 @@ async def predict_features(file: UploadFile = File(None)):
     finally:
         db.close()
 
-@app.post("/airflow/predict")
-async def predict_from_airflow(file: UploadFile = File(None)):
-    db = SessionLocal()
-    try:
-        if file:
-            content = await file.read()
-            df = pd.read_csv(io.StringIO(content.decode('utf-8')))
-            predictions = []
-
-            for _, row in df.iterrows():
-                input_data = row.to_dict()
-                predictions.append(make_predictions(pd.DataFrame(input_data, index=[0]))['Sales'][0])
-
-            for i, pred in enumerate(predictions):
-                feature_input = FeatureInput(**df.iloc[i].to_dict())
-                feature_input.Sales = pred
-                feature_input_dict = {k: v if not pd.isna(v) else None for k, v in df.iloc[i].to_dict().items()}
-                feature_input = FeatureInput(**feature_input_dict)
-                db.add(feature_input)
-
-            db.commit()
-            return JSONResponse(content={"sales": predictions})
-    
-    except Exception as e:
-        db.rollback()
-        print(f"Error: {str(e)}") 
-        raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
-    finally:
-        db.close()
-
 @app.post("/predict/")
 async def predict_features(filepaths: list = Body(...)):
     db = SessionLocal()
@@ -197,7 +128,7 @@ async def predict_features(filepaths: list = Body(...)):
                 feature_input.Sales = pred
                 db.add(feature_input)
                 db.commit()
-            time.sleep(5)
+            #time.sleep(5)
 
         #db.commit()
         return JSONResponse(content={"sales": predictions})
