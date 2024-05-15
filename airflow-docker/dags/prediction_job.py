@@ -40,22 +40,6 @@ def check_files(data_folder):
     else:
         return False
 
-'''def upload_files(**kwargs):
-    task_instance = kwargs['task_instance']
-    new_files = task_instance.xcom_pull(task_ids='check_for_new_data')
-    if new_files:
-        print("Processing new files:", new_files)
-        for file in new_files:
-            filepath = os.path.join(data_folder, file)
-            hook = HttpHook(method='POST', http_conn_id='http_conn_id')
-            response = hook.run(endpoint=fastapi_url, data={'filepath': filepath})
-            if response.status_code == 200:
-                print("New files forwarded to FastAPI successfully")
-            else:
-                print("Failed to forward new files to FastAPI:", response.text)
-    else:
-        print("No new files to process")'''
-
 def upload_files(**kwargs):
     task_instance = kwargs['task_instance']
     new_files = task_instance.xcom_pull(task_ids='check_for_new_data')
