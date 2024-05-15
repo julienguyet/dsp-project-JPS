@@ -113,21 +113,18 @@ async def predict_features(filepaths: list = Body(...)):
             print(file_path)
             if not file_path.is_file():
                 print(f"Error: File not found - {filepath}")
-                continue  # Skip to next filepath
+                continue
 
-            # Read the file content from the path
             with open(file_path, 'r') as f:
                 df = pd.read_csv(f)
                 for _, row in df.iterrows():
                     input_data = row.to_dict()
                     predictions.append(make_predictions(pd.DataFrame(input_data, index=[0]))['Sales'][0])
 
-            # Process predictions and database operations here
             for i, pred in enumerate(predictions):
                 feature_input = FeatureInput(**df.iloc[i].to_dict())
                 feature_input.Sales = pred
                 db.add(feature_input)
-            #time.sleep(5)
 
         db.commit()
         return JSONResponse(content={"sales": predictions})
