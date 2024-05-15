@@ -4,6 +4,7 @@ import json
 import io
 sys.path.append('../')
 from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Body, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 import joblib
 import pandas as pd
@@ -172,9 +173,14 @@ def past_prediction(start_date: date = Query(..., description="Start date (YYYY-
                     "Sales": prediction.Sales,
                     "pred_date": str(prediction.pred_date)
                 }
+                # Ensure that all float values are JSON compliant
+                for key, value in serialized_prediction.items():
+                    if isinstance(value, float) and (value == float('inf') or value == float('-inf') or value != value):
+                        serialized_prediction[key] = None  # Replace problematic float values with None
+                
                 serialized_predictions.append(serialized_prediction)
                 
-            return serialized_predictions
+            return JSONResponse(content=jsonable_encoder(serialized_predictions))
         else:
             print("No predictions found for the selected date range.")
             raise HTTPException(status_code=404, detail="No predictions found for the selected date range.")
