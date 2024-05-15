@@ -281,7 +281,7 @@ def save_file(good_data_directory, bad_data_directory, success_ratio, flag, rows
         print(f"rows to drop: {rows_to_drop}")
         print(f"length of rows to drop: {len(rows_to_drop)}")
         
-        if success_ratio == 0.0:
+        if success_ratio == 100.0:
             shutil.move(file_path, os.path.join(good_data_directory, os.path.basename(file_path)))
             print("file moved to good_data_directory")
 
@@ -303,6 +303,7 @@ def save_file(good_data_directory, bad_data_directory, success_ratio, flag, rows
             good_df = good_df[(good_df["Dept"] > 0)]
             good_df = good_df[good_df["Date"] > pd.Timestamp('2009-12-31')]
             good_df = good_df[(good_df["Size"] > 0)]
+            good_df = good_df[(good_df["CPI"] > 0)]
             good_df = good_df[(good_df["Fuel_Price"] >= 0)]
             good_df = good_df[(good_df["Unemployment"] >= 0)]
             good_df = good_df[good_df['Type'].isin(type_valid_values)]
