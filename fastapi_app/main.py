@@ -28,7 +28,6 @@ from pydantic import BaseModel
 import time
 
 
-
 app = FastAPI()
 
 DATABASE_URL = "postgresql://airflow:airflow@localhost:5432/postgres" #"postgresql://siva:siva@localhost/jsp"
@@ -61,7 +60,7 @@ class FeatureInput(Base):
 class FeatureInputRequest(BaseModel):
     Store: float
     Dept: float
-    Date: str
+    Date: date
     Temperature: float
     Fuel_Price: float
     MarkDown1: float
@@ -104,6 +103,7 @@ async def predict_features(file: UploadFile = File(None)):
     finally:
         db.close()
 
+'''
 @app.post("/predict/")
 async def predict_features(filepaths: list = Body(...)):
     db = SessionLocal()
@@ -129,6 +129,40 @@ async def predict_features(filepaths: list = Body(...)):
                 db.add(feature_input)
             db.commit()
             
+        return JSONResponse(content={"sales": predictions})
+    
+    except Exception as e:
+        db.rollback()
+        print(f"Error: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
+    finally:
+        db.close()
+'''
+
+@app.post("/predict/")
+async def predict_features(filepaths: List[str] = Body(...)):
+    db = SessionLocal()
+    try:
+        predictions = []
+        feature_inputs = []
+        for filepath in filepaths:
+            file_path = Path(filepath)
+            if not file_path.is_file():
+                print(f"Error: File not found - {filepath}")
+                continue
+
+            df = pd.read_csv(file_path)
+            for _, row in df.iterrows():
+                input_data = row.to_dict()
+                pred = make_predictions(pd.DataFrame([input_data]))['Sales'][0]
+                predictions.append(pred)
+                feature_input = FeatureInput(**input_data)
+                feature_input.Sales = pred
+                feature_inputs.append(feature_input)
+
+            db.bulk_save_objects(feature_inputs)
+            db.commit()
+        
         return JSONResponse(content={"sales": predictions})
     
     except Exception as e:
