@@ -287,6 +287,7 @@ def save_file(good_data_directory, bad_data_directory, success_ratio, flag, rows
 
         elif float(success_ratio) >= 50:
             good_data = df.filter(items=rows_to_keep, axis=0)
+            good_data['Date'] = pd.to_datetime(good_data['Date'], errors='coerce')
             indices = []
 
             for idx, row in good_data.iterrows():
@@ -300,6 +301,7 @@ def save_file(good_data_directory, bad_data_directory, success_ratio, flag, rows
             good_df[numeric_columns] = good_df[numeric_columns].astype(float)
             good_df = good_df[(good_df["Store"] > 0)]
             good_df = good_df[(good_df["Dept"] > 0)]
+            good_df = good_df[good_df["Date"] > pd.Timestamp('2009-12-31')]
             good_df = good_df[(good_df["Size"] > 0)]
             good_df = good_df[(good_df["Fuel_Price"] >= 0)]
             good_df = good_df[(good_df["Unemployment"] >= 0)]
