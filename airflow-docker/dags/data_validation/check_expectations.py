@@ -12,6 +12,7 @@ from pymsteams import connectorcard
 import urllib.parse
 import great_expectations as gx
 from great_expectations.checkpoint import Checkpoint
+from great_expectations.exceptions import GreatExpectationsError
 import re
 import json
 from airflow.hooks.postgres_hook import PostgresHook
@@ -40,7 +41,11 @@ def validate_data(file_path: str) -> dict:
     to_not_be_null = ["Store","Dept","Date","Temperature","Fuel_Price","CPI","Unemployment","IsHoliday","Type","Size"]
 
     for col in expected_columns:
-        validator.expect_column_to_exist(column=col)
+        try:
+            validator.expect_column_to_exist(column=col)
+        except GreatExpectationsError as e:
+                print(f"Column {col} does not exist. File will be moved to bad data folder. Error: {e}")
+                break
 
     validator.expect_table_columns_to_match_ordered_list(column_list=["Store","Dept","Date","Temperature",
                                                                                                 "Fuel_Price","MarkDown1","MarkDown2",
@@ -49,7 +54,11 @@ def validate_data(file_path: str) -> dict:
     
     
     for col in to_not_be_null:
-        validator.expect_column_values_to_not_be_null(column=col)
+        try:
+            validator.expect_column_values_to_not_be_null(column=col)
+        except GreatExpectationsError as e:
+                print(f"Column {col} does not exist. File will be moved to bad data folder. Error: {e}")
+                break
     
     validator.expect_column_values_to_be_of_type(column="Store", type_='int64')
     validator.expect_column_values_to_be_of_type(column="Dept", type_='int64')
