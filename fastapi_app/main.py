@@ -127,10 +127,9 @@ async def predict_features(filepaths: list = Body(...)):
                 feature_input = FeatureInput(**df.iloc[i].to_dict())
                 feature_input.Sales = pred
                 db.add(feature_input)
-                db.commit()
             #time.sleep(5)
 
-        #db.commit()
+        db.commit()
         return JSONResponse(content={"sales": predictions})
     
     except Exception as e:
