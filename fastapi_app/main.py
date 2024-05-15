@@ -128,8 +128,7 @@ async def predict_features(filepaths: list = Body(...)):
                 feature_input.Sales = pred
                 db.add(feature_input)
             db.commit()
-
-        #db.commit()
+            
         return JSONResponse(content={"sales": predictions})
     
     except Exception as e:
