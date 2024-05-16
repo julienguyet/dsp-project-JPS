@@ -92,6 +92,8 @@ def validate_data(file_path: str) -> dict:
     statistics = checkpoint_result.get_statistics()['validation_statistics'][stats_key]
     report_link = result_json.get(list(result_json.keys())[0]).get('actions_results', {}).get('update_data_docs', {}).get('local_site', None)
     encoded_report_link = urllib.parse.quote(report_link, safe=':/')
+    report_link = context.build_data_docs()
+    encoded_report_link = list(report_link.values())[0]
 
     total_expectations = statistics["evaluated_expectations"]
     successful_expectations = statistics["successful_expectations"]
@@ -207,7 +209,7 @@ def send_alerts(report_directory, total_expectations, successful_expectations, f
     
     alert = connectorcard(teams_webhook)
     alert.title(f"{status} ALERT")
-    alert.text(f"{successful_expectations} rules succeeded, and {failed_expectations} rules failed out of {total_expectations}. Success ratio: {percentage}. To open the report in terminal, from dag folder run in order: \n`cd {report_directory}` \n `{bash_latest_folder}` \n `{bash_cd_latest_folder}`")
+    alert.text(f"{successful_expectations} rules succeeded, and {failed_expectations} rules failed out of {total_expectations}. Success ratio: {percentage}. To open the report copy this link in your browser: {encoded_report_link}. To access latest report, in terminal, from dag folder run in order: \n`cd {report_directory}` \n `{bash_latest_folder}` \n `{bash_cd_latest_folder}`")
     alert.send()
     
     print("Alert sent successfully.")
