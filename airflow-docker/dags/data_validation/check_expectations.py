@@ -194,7 +194,6 @@ def send_alerts(report_directory, total_expectations, successful_expectations, f
 
     bash_latest_folder = "latest_folder=$(ls -td */ | head -n 1)"
     bash_cd_latest_folder = 'cd "$latest_folder" && open *.html'
-    
     status = ""
 
     if float(percentage) < 20:
