@@ -26,6 +26,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 from pydantic import BaseModel
 import time
+import pytz
 
 
 app = FastAPI()
@@ -34,6 +35,8 @@ DATABASE_URL = "postgresql://airflow:airflow@localhost:5432/postgres" #"postgres
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+paris_timezone = pytz.timezone('Europe/Paris')
 
 class FeatureInput(Base):
     __tablename__ = "feature"
@@ -54,7 +57,7 @@ class FeatureInput(Base):
     Type = Column(String)
     Size = Column(Float)
     Sales = Column(Float)
-    pred_date = Column(DateTime, default=datetime.utcnow)
+    pred_date = Column(DateTime, default=datetime.now(paris_timezone))
 
 
 class FeatureInputRequest(BaseModel):
@@ -103,41 +106,6 @@ async def predict_features(file: UploadFile = File(None)):
     finally:
         db.close()
 
-'''
-@app.post("/predict/")
-async def predict_features(filepaths: list = Body(...)):
-    db = SessionLocal()
-    try:
-        predictions = []
-        for filepath in filepaths:
-            # Validate and handle potential path issues
-            file_path = Path(filepath)
-            print(file_path)
-            if not file_path.is_file():
-                print(f"Error: File not found - {filepath}")
-                continue
-
-            with open(file_path, 'r') as f:
-                df = pd.read_csv(f)
-                for _, row in df.iterrows():
-                    input_data = row.to_dict()
-                    predictions.append(make_predictions(pd.DataFrame(input_data, index=[0]))['Sales'][0])
-
-            for i, pred in enumerate(predictions):
-                feature_input = FeatureInput(**df.iloc[i].to_dict())
-                feature_input.Sales = pred
-                db.add(feature_input)
-            db.commit()
-            
-        return JSONResponse(content={"sales": predictions})
-    
-    except Exception as e:
-        db.rollback()
-        print(f"Error: {str(e)}") 
-        raise HTTPException(status_code=500, detail=f"Internal Server Error {str(e)}")
-    finally:
-        db.close()
-'''
 
 @app.post("/predict/")
 async def predict_features(filepaths: List[str] = Body(...)):
