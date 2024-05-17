@@ -61,7 +61,7 @@ send_alerts_task = PythonOperator(
             'failed_expectations': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[2] }}",
             'percentage': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[3] }}",
             'report_directory': REPORT_DIRECTORY,
-            'encoded_report_link': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[4] }}",
+            'encoded_report_link': "file:///Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/gx/uncommitted/data_docs/local_site/index.html", #"{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[4] }}",
             'teams_webhook': TEAMS_WEBHOOK},
     dag=dag
 )

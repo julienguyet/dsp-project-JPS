@@ -197,6 +197,7 @@ def send_alerts(report_directory, total_expectations, successful_expectations, f
     bash_latest_folder = "latest_folder=$(ls -td */ | head -n 1)"
     bash_cd_latest_folder = 'cd "$latest_folder" && open *.html'
     status = ""
+    dt = datetime.now()
 
     if float(percentage) < 20:
         status = "LOW"
@@ -209,7 +210,7 @@ def send_alerts(report_directory, total_expectations, successful_expectations, f
     
     alert = connectorcard(teams_webhook)
     alert.title(f"{status} ALERT")
-    alert.text(f"{successful_expectations} rules succeeded, and {failed_expectations} rules failed out of {total_expectations}. Success ratio: {percentage}. To open the report copy this link in your browser: {encoded_report_link}. To access latest report, in terminal, from dag folder run in order: \n`cd {report_directory}` \n `{bash_latest_folder}` \n `{bash_cd_latest_folder}`")
+    alert.text(f"{successful_expectations} rules succeeded, and {failed_expectations} rules failed out of {total_expectations}. Success ratio: {percentage}. To open the report copy this link in your browser: {encoded_report_link} and look for report with date: {dt}. To access latest report, in terminal, from dag folder run in order: \n`cd {report_directory}` \n `{bash_latest_folder}` \n `{bash_cd_latest_folder}`")
     alert.send()
     
     print("Alert sent successfully.")
