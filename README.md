@@ -131,6 +131,10 @@ Finally, go back to the Airflow home and active the two dags like below:
 
 <img width="291" alt="Screenshot 2024-05-14 at 16 44 04" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/6ab3dad9-60cd-4eef-a92f-bdbd8d2a60ba">
 
+If running properly, you should see something like the following in your graph visualisation:
+
+<img width="750" alt="Screenshot 2024-05-17 at 23 24 21" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/e8848208-d3d3-4d1f-bc8f-4468a6b984fd">
+
 ## 9. Dashboards
 
 Once the dags are running, data is saved instantly in the database. If you wish to monitor the errors and performance of the prediction model you can use the dashboard templates saved in the grafana folder. Upload them in [Grafana](https://grafana.com/) and you will obtain those:
