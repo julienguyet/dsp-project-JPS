@@ -21,7 +21,7 @@ import urllib.parse
 import re
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'data_validation'))
-from data_validation.__init__ import RAW_DATA_DIRECTORY, REPORT_DIRECTORY, TEAMS_WEBHOOK, DB_PARAMS, GOOD_DATA_DIRECTORY, BAD_DATA_DIRECTORY
+from data_validation.__init__ import RAW_DATA_DIRECTORY, REPORT_DIRECTORY, TEAMS_WEBHOOK, DB_PARAMS, GOOD_DATA_DIRECTORY, BAD_DATA_DIRECTORY, INDEX_SITE
 from data_validation.check_expectations import read_data, validate_data, send_alerts, save_data_errors, save_file
 
 default_args = {
@@ -61,7 +61,7 @@ send_alerts_task = PythonOperator(
             'failed_expectations': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[2] }}",
             'percentage': "{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[3] }}",
             'report_directory': REPORT_DIRECTORY,
-            'encoded_report_link': "file:///Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/gx/uncommitted/data_docs/local_site/index.html", #"{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[4] }}",
+            'encoded_report_link': INDEX_SITE, #"{{ task_instance.xcom_pull(task_ids='validate_data', key='return_value')[4] }}",
             'teams_webhook': TEAMS_WEBHOOK},
     dag=dag
 )
