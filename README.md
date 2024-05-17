@@ -130,3 +130,15 @@ The first one will start the Fast API and the second open the streamlit app wher
 Finally, go back to the Airflow home and active the two dags like below:
 
 <img width="291" alt="Screenshot 2024-05-14 at 16 44 04" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/6ab3dad9-60cd-4eef-a92f-bdbd8d2a60ba">
+
+## 9. Dashboards
+
+Once the dags are running, data is saved instantly in the database. If you wish to monitor the errors and performance of the prediction model you can use the dashboard templates saved in the grafana folder. Upload them in [Grafana](https://grafana.com/) and you will obtain those:
+
+Data Quality Dashboard:
+
+<img width="1301" alt="Screenshot 2024-05-17 at 11 22 40" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/ea874734-0373-49be-9821-241f2c4d6b59">
+
+Model Performance Dashboard:
+
+<img width="595" alt="Screenshot 2024-05-17 at 22 57 39" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/fd4c6b01-6fdc-4e0a-b92f-680b3ce238ef">
