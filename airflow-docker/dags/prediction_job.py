@@ -18,6 +18,7 @@ default_args = {
 }
 
 data_folder = GOOD_DATA_DIRECTORY
+data_to_check = "/Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow-docker/dags/good_data"
 fastapi_url = "/predict/"
 
 def check_files(data_folder):
@@ -45,11 +46,9 @@ def upload_files(**kwargs):
     new_files = task_instance.xcom_pull(task_ids='check_for_new_data')
     if new_files:
         print("Processing new files:", new_files)
-        file_paths = [os.path.join("/Users/julien/Documents/EPITA/S2/DSP/dsp-project-JPS/airflow-docker/dags/good_data", file) for file in new_files]
-        # Send file paths in request body
+        file_paths = [os.path.join(data_to_check, file) for file in new_files]
         hook = HttpHook(method='POST', http_conn_id='http_conn_id')
         response = hook.run(endpoint=fastapi_url, json=file_paths)
-        # Handle response as needed
     else:
         print("No new files to process")
 

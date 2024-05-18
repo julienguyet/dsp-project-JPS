@@ -318,6 +318,7 @@ def save_file(good_data_directory, bad_data_directory, success_ratio, flag, rows
             good_df = good_df[(good_df["Size"] > 0)]
             good_df = good_df[(good_df["CPI"] > 0)]
             good_df = good_df[(good_df["Fuel_Price"] >= 0)]
+            good_df = good_df[(good_df["Temperature"] >= 0)]
             good_df = good_df[(good_df["Unemployment"] >= 0)]
             good_df = good_df[good_df['Type'].isin(type_valid_values)]
             good_df = good_df[good_df['IsHoliday'].isin(holidays_valid_values)]
