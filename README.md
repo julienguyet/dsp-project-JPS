@@ -12,6 +12,8 @@ Now you can move to the next steps
 A Git Repository to demonstrate a data validation job using Airflow: we will run an airflow job every one minute to check the data quality of a file and remove bad data from our ingestion pipeline. Then, another dag will make API calls to run ML predictions on the data we cleaned in the previous step.
 If you would like to replicate this environment on your own machine, you can follow the steps below. 
 
+<img width="695" alt="Screenshot 2024-05-18 at 09 47 10" src="https://github.com/julienguyet/dsp-project-JPS/assets/55974674/bb995bf7-0dd6-4891-8426-4f5df811c535">
+
 ## 1. Install Docker
 The first thing to do is to install docker (if already installed, you can move to step 2).
 Go to this [link](https://www.docker.com/get-started/) and follow the instructions based on your OS.
